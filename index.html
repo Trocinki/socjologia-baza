@@ -8,15 +8,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ====== SYSTEM NAGRODY: zmienne sterowane przez JS (bloom) ====== */
+/* ====== SYSTEM NAGRODY ====== */
 :root{
-  --bloom: 0;                 /* 0..1 — poziom rozkwitu */
+  --bloom: 0;                 
   --bg-h: 222; --bg-s: 14%; --bg-l: 7%;
   --surface-h: 224; --surface-s: 16%; --surface-l: 11%;
   --accent-h: 205; --accent-s: 22%; --accent-l: 52%;
   --accent2-h: 250;
-  --aurora: 0;                /* siła tła-aurory */
-  --glow: 0px;                /* poświata aktywnych elementów */
+  --aurora: 0;                
+  --glow: 0px;                
   --ink: #e9edf5;
   --ink-soft: #9aa6bd;
   --line: hsl(var(--surface-h) 18% 22%);
@@ -37,7 +37,6 @@ body{
   position:relative;
   overflow-x:hidden;
 }
-/* Aurora tła — rośnie wraz z serią poprawnych odpowiedzi */
 body::before{
   content:"";position:fixed;inset:-20% -10% -10% -10%;z-index:-2;pointer-events:none;
   background:
@@ -46,7 +45,7 @@ body::before{
     radial-gradient(55% 60% at 50% 92%, hsl(calc(var(--accent-h) + 40) 78% 52% / .45), transparent 75%);
   opacity:var(--aurora);
   filter:blur(20px) saturate(1.1);
-  transition:opacity 1.2s ease, background 1.2s ease;
+  transition:opacity .6s linear, background 1s ease;
 }
 body::after{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
@@ -79,6 +78,7 @@ header.top{
 .stat .val{font-family:"Fraunces",serif;font-size:1.5rem;font-weight:600;line-height:1.1}
 .stat .val small{font-size:.8rem;color:var(--ink-soft);font-family:"Hanken Grotesk"}
 #streak-stat .val{color:var(--accent);transition:color .9s ease}
+#xp-stat .val{color:#f0b46a;transition:color .9s ease}
 
 /* ====== Pasek narzędzi ====== */
 .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
@@ -97,11 +97,17 @@ header.top{
 .switch.on .label-txt{color:var(--ink)}
 
 .btn-reset{
-  margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+  background:transparent;border:1px solid var(--line);color:var(--ink-soft);
   padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.85rem;font-family:inherit;
   transition:.2s;
 }
 .btn-reset:hover{border-color:var(--no-bd);color:var(--no)}
+.btn-mode{
+  background:transparent;border:1px solid var(--accent);color:var(--accent);
+  padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.85rem;font-family:inherit;
+  transition:.2s; font-weight: 600; margin-left: auto;
+}
+.btn-mode:hover{background:var(--accent);color:#fff;}
 
 /* ====== Pasek postępu ====== */
 #progress{height:5px;border-radius:999px;background:hsl(var(--surface-h) 16% 18%);overflow:hidden;margin-bottom:22px}
@@ -186,19 +192,23 @@ button.primary:hover{filter:brightness(1.12)}
 .score-big{font-family:"Fraunces",serif;font-size:3.2rem;font-weight:600;line-height:1;
   background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .err{background:hsl(var(--surface-h) 16% 14%);border-left:3px solid var(--no);
-  padding:14px 16px;border-radius:10px;margin:12px 0}
-.err .q{font-weight:600;margin-bottom:8px}
-.err .a{color:#d6f5e6;background:var(--ok-bg);border:1px solid var(--ok-bd);padding:9px 12px;border-radius:8px}
+  padding:18px 20px;border-radius:12px;margin:16px 0}
+.err .q{font-family:"Fraunces",serif;font-size:1.2rem;font-weight:500;margin-bottom:12px;line-height:1.4}
+.err .opts{font-size:.95rem;color:var(--ink-soft);margin-bottom:16px;line-height:1.6}
+.err .opts b{color:var(--ink)}
+.err .a-bad{color:#ffd7dc;background:var(--no-bg);border:1px solid var(--no-bd);padding:9px 12px;border-radius:8px;margin-bottom:8px;font-size:.95rem}
+.err .a-good{color:#d6f5e6;background:var(--ok-bg);border:1px solid var(--ok-bd);padding:9px 12px;border-radius:8px;font-size:.95rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="top">
-    <div class="brand">Socjologia <em>— baza pytań</em></div>
+    <div class="brand">Socjologia <em id="brand-em">— baza pytań</em></div>
   </header>
 
   <div id="dashboard">
+    <div class="stat" id="xp-stat"><div class="label">Poziom</div><div class="val"><span id="lvl-name">Obserwator</span> <small id="lvl-xp">0/20</small></div></div>
     <div class="stat"><div class="label">Pytanie</div><div class="val"><span id="cur">1</span><small> / <span id="tot">0</span></small></div></div>
     <div class="stat"><div class="label">Wynik</div><div class="val" id="score">0</div></div>
     <div class="stat" id="streak-stat"><div class="label">Seria</div><div class="val" id="streak">0</div></div>
@@ -208,8 +218,9 @@ button.primary:hover{filter:brightness(1.12)}
     <label class="switch" id="shuffle-switch">
       <input type="checkbox" id="shuffle-toggle">
       <span class="track"></span>
-      <span class="label-txt">Tasowanie pytań i odpowiedzi</span>
+      <span class="label-txt">Tasowanie</span>
     </label>
+    <button class="btn-mode" id="btn-mode" onclick="toggleMode()">Przejdź do Testu (40 pytań)</button>
     <button class="btn-reset" onclick="resetSession()">Reset sesji</button>
   </div>
 
@@ -226,21 +237,21 @@ button.primary:hover{filter:brightness(1.12)}
 
   <div class="card hidden" id="summary">
     <h2>Podsumowanie</h2>
-    <p style="color:var(--ink-soft);margin-top:0">Wynik końcowy</p>
+    <p style="color:var(--ink-soft);margin-top:0">Wynik z pierwszej próby</p>
     <div class="score-big"><span id="fscore">0</span> / <span id="ftot">0</span></div>
     <p style="font-size:1.1rem;margin-top:8px"><span id="fpct">0</span>% poprawnych odpowiedzi</p>
     <div id="errs" class="hidden">
-      <h3 style="color:var(--no);border-bottom:1px solid var(--line);padding-bottom:8px;margin-top:28px">Pytania, które sprawiły trudność</h3>
+      <h3 style="color:var(--no);border-bottom:1px solid var(--line);padding-bottom:8px;margin-top:28px">Szczegółowa analiza błędów</h3>
       <div id="errlist"></div>
     </div>
-    <button class="primary" onclick="restart()">Rozwiąż test ponownie</button>
+    <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
 </div>
 
 <script>
 /* ============================================================
-   DANE: pytania + klucz (klucz POPRAWIONY: 37→e, 42→d, 47→c, 56→e)
+   DANE
    ============================================================ */
 const questionsText = `
 (1) Charyzma to:
@@ -1240,7 +1251,6 @@ function parseAll(){
     } else if(om && cur){
       cur.options.push({ letter:om[1], text:om[2] });
     } else if(cur){
-      // kontynuacja długiej treści pytania
       if(cur.options.length===0) cur.text += ' '+line;
     }
   }
@@ -1250,111 +1260,176 @@ function parseAll(){
 const BANK = parseAll();
 
 /* ============================================================
-   STAN
+   STAN APLIKACJI I TRYBY
    ============================================================ */
-const SAVE_KEY='socjoQuiz_v2';
-let queue=[];          // aktywna kolejka pytań (z powtórkami)
+let currentMode = 'normal'; // 'normal' lub 'test'
+let queue=[];          
 let idx=0;
-let score=0, streak=0;
-let answered=0;        // ile UNIKALNYCH pytań zaliczono (do paska postępu)
-let wrongMap={};       // id -> pytanie (do podsumowania)
+let score=0, streak=0, answered=0;        
+let wrongMap={};       
 let shuffleOn=true;
-let curSeq=[];         // dla pytań sekwencyjnych
+let curSeq=[];         
 let isAnswered=false;
-// system nagrody:
+let activeBank=BANK;   
+let globalXP=0;        
+
+// System nagrody wizualnej
 let bloom=0, peak=0;
+const INTENSITY_TARGET = 5; 
+const PENALTY = 2;
+
+const LEVELS = [
+  { req: 0, name: "Obserwator" },
+  { req: 20, name: "Adept" },
+  { req: 70, name: "Badacz" },
+  { req: 150, name: "Socjolog" },
+  { req: 300, name: "Ekspert" },
+  { req: 1000, name: "Meow" }
+];
 
 function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
 function buildQueue(){
-  let base = shuffleOn ? shuffle(BANK) : [...BANK];
-  // klon pytań + ewentualne tasowanie opcji
+  // Lokalne wymuszenie tasowania w trybie testu, niezależnie od ustawień użytkownika
+  const forceShuffle = currentMode === 'test' ? true : shuffleOn;
+  
+  let base = forceShuffle ? shuffle(activeBank) : [...activeBank];
   queue = base.map(q=>{
     const clone={...q, isRetry:false, options:[...q.options]};
-    if(shuffleOn && !q.correct.includes(',')) clone.options = shuffle(clone.options);
+    if(forceShuffle && !q.correct.includes(',')) clone.options = shuffle(clone.options);
     return clone;
   });
 }
 
 /* ============================================================
-   SYSTEM NAGRODY — płynna zmiana kolorystyki
+   SYSTEM NAGRODY (logika poświaty/kolorów)
    ============================================================ */
-const BLOOM_TARGET = 11; // pełny rozkwit po ~11 trafieniach
 function applyBloom(){
-  const t = Math.max(0, Math.min(1, bloom / BLOOM_TARGET));
-  // ease-out: nagroda widoczna już po 1. poprawnej odpowiedzi, mocno z przodu krzywej
-  const e = bloom <= 0 ? 0 : 1 - Math.pow(1 - t, 1.8);
-  // wędrówka barwy akcentu: stalowy błękit -> turkus -> fiolet -> róż
-  const accentH = 205 + e*115;          // 205 -> 320
-  const accent2H = 250 + e*70;          // 250 -> 320
-  const accentS = 22 + e*52;            // 22% -> 74%
-  const accentL = 52 + e*6;
-  const bgL = 7 + e*1.5;
-  const surfL = 11 + e*2.5;
+  const intensity = Math.max(0, Math.min(1, bloom / INTENSITY_TARGET));
+  const e = intensity; 
+  
+  const colorShiftPoints = Math.max(0, bloom - INTENSITY_TARGET);
+  const accentH = (205 + colorShiftPoints * 15) % 360;
+  const accent2H = (250 + colorShiftPoints * 15) % 360;
+
+  const accentS = 22 + e * 52; 
+  const accentL = 35 + e * 23; 
+  const bgL = 5 + e * 3.5; 
+  const surfL = 9 + e * 4.5;
+
   const r = document.documentElement.style;
-  r.setProperty('--bloom', t.toFixed(3));
+  r.setProperty('--bloom', intensity.toFixed(3));
   r.setProperty('--accent-h', accentH.toFixed(1));
   r.setProperty('--accent2-h', accent2H.toFixed(1));
-  r.setProperty('--accent-s', accentS.toFixed(1)+'%');
-  r.setProperty('--accent-l', accentL.toFixed(1)+'%');
-  r.setProperty('--bg-l', bgL.toFixed(1)+'%');
-  r.setProperty('--surface-l', surfL.toFixed(1)+'%');
-  r.setProperty('--aurora', (e*0.6).toFixed(3));
-  r.setProperty('--glow', (e*70).toFixed(1)+'px');
+  r.setProperty('--accent-s', accentS.toFixed(1) + '%');
+  r.setProperty('--accent-l', accentL.toFixed(1) + '%');
+  r.setProperty('--bg-l', bgL.toFixed(1) + '%');
+  r.setProperty('--surface-l', surfL.toFixed(1) + '%');
+  
+  r.setProperty('--aurora', (e * 0.6).toFixed(3));
+  r.setProperty('--glow', (e * 70).toFixed(1) + 'px');
 }
+
 function bloomCorrect(){
   bloom += 1;
   peak = Math.max(peak, bloom);
   applyBloom();
 }
+
 function bloomWrong(){
-  const floor = peak * 0.35;          // nie resetuje się całkowicie
-  bloom = Math.max(floor, bloom - 1.6); // cofa się o nieco więcej niż jeden krok
+  bloom = Math.max(0, bloom - PENALTY); 
   applyBloom();
 }
 
 /* ============================================================
-   PERSYSTENCJA (bezpieczna — działa lokalnie, nie wysypuje w sandboxie)
+   PERSYSTENCJA Z ROZDZIELENIEM TRYBÓW W LOCALSTORAGE
    ============================================================ */
-function save(){
+function getSaveKey() {
+  return currentMode === 'test' ? 'socjoQuiz_v2_test' : 'socjoQuiz_v2_normal';
+}
+
+function saveState(){
   try{
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
-      queue, idx, score, streak, answered, wrongMap, shuffleOn, bloom, peak
+    const activeBankIds = activeBank.map(q => q.id);
+    localStorage.setItem(getSaveKey(), JSON.stringify({
+      queue, idx, score, streak, answered, wrongMap, shuffleOn, bloom, peak, activeBankIds
     }));
+    localStorage.setItem('socjoQuiz_v2_globalXP', globalXP);
+    localStorage.setItem('socjoQuiz_v2_currentMode', currentMode);
   }catch(e){}
 }
-function load(){
+
+function loadState(){
   try{
-    const s=JSON.parse(localStorage.getItem(SAVE_KEY));
+    const gXP = localStorage.getItem('socjoQuiz_v2_globalXP');
+    if(gXP !== null) globalXP = parseInt(gXP, 10);
+
+    const s = JSON.parse(localStorage.getItem(getSaveKey()));
     if(!s||!s.queue||!s.queue.length) return false;
+    
     ({queue,idx,score,streak,answered,wrongMap,shuffleOn,bloom,peak}=s);
+    
+    if(currentMode === 'test' && s.activeBankIds){
+      activeBank = s.activeBankIds.map(id => BANK.find(q => q.id === id)).filter(Boolean);
+    } else {
+      activeBank = BANK;
+    }
     return true;
   }catch(e){ return false; }
 }
-function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+function clearState(){ 
+  try{ 
+    localStorage.removeItem(getSaveKey()); 
+    localStorage.setItem('socjoQuiz_v2_globalXP', globalXP); 
+  }catch(e){} 
+}
 
 /* ============================================================
-   RENDER
+   RENDER INTERFEJSU
    ============================================================ */
 const $=id=>document.getElementById(id);
 
 function updateStats(){
-  $('cur').textContent = Math.min(answered+1, BANK.length);
-  $('tot').textContent = BANK.length;
+  $('cur').textContent = Math.min(answered+1, activeBank.length);
+  $('tot').textContent = activeBank.length;
   $('score').textContent = score;
   $('streak').textContent = streak;
-  $('progress').firstElementChild.style.width = (answered/BANK.length*100)+'%';
+  $('progress').firstElementChild.style.width = (answered/activeBank.length*100)+'%';
+
+  let curLvl = LEVELS[0], nextLvl = LEVELS[1];
+  for(let i=0; i<LEVELS.length; i++){
+    if(globalXP >= LEVELS[i].req){
+      curLvl = LEVELS[i];
+      nextLvl = LEVELS[i+1] || null;
+    }
+  }
+  $('lvl-name').textContent = curLvl.name;
+  $('lvl-xp').textContent = nextLvl ? `${globalXP}/${nextLvl.req}` : globalXP;
+}
+
+function updateUIForMode(){
+  if(currentMode === 'test') {
+      $('btn-mode').textContent = "Wróć do bazy nauki";
+      $('brand-em').textContent = "— Test (40 pytań)";
+      $('shuffle-switch').classList.add('hidden'); // Ukrycie widoczności dla testu
+  } else {
+      $('btn-mode').textContent = "Przejdź do Testu (40 pytań)";
+      $('brand-em').textContent = "— Baza pytań";
+      $('shuffle-switch').classList.remove('hidden'); // Przywrócenie dla bazy
+  }
 }
 
 function showQuestion(){
   isAnswered=false;
-  // pomijamy puste/zakończone
   if(idx>=queue.length){ return finish(); }
   const q=queue[idx];
+  
   $('retry-badge').classList.toggle('hidden', !q.isRetry);
-  $('qnum').textContent='Pytanie '+q.id;
+  $('qnum').textContent='Pytanie '+(currentMode === 'test' ? (answered+1) : q.id);
   $('question').textContent=q.text;
   $('next').classList.add('hidden');
+  
   const box=$('options'); box.innerHTML='';
 
   if(q.correct.includes(',')){ renderSeq(q,box); return; }
@@ -1376,15 +1451,15 @@ function selectOption(el, letter, q){
     if(o.dataset.letter===q.correct) o.classList.add('correct');
     if(o===el && letter!==q.correct) o.classList.add('wrong');
   });
-  if(letter===q.correct){ correct(q); } else { mistake(q); }
+  if(letter===q.correct){ correct(q); } else { mistake(q, letter); }
   $('next').classList.remove('hidden');
-  updateStats(); save();
+  updateStats(); saveState();
 }
 
-/* --- pytania sekwencyjne --- */
 function renderSeq(q,box){
+  const forceShuffle = currentMode === 'test' ? true : shuffleOn;
   if(!curSeq.length || curSeq._for!==q.id){
-    curSeq = shuffleOn ? shuffle(q.options) : [...q.options];
+    curSeq = forceShuffle ? shuffle(q.options) : [...q.options];
     curSeq._for=q.id;
   }
   drawSeq(q,box);
@@ -1418,30 +1493,40 @@ function checkSeq(q,box,btn){
   box.querySelectorAll('.seq').forEach(s=>s.classList.add(ok?'ok-seq':'no-seq'));
   const fb=document.createElement('div'); fb.className='feedback '+(ok?'ok':'no');
   if(ok){ correct(q); fb.textContent='Świetnie — prawidłowa kolejność.'; }
-  else{ mistake(q); fb.innerHTML='Niepoprawnie. Twoja kolejność: <b>'+userOrder+'</b><br>Poprawna: <b>'+q.correct+'</b>'; }
+  else{ mistake(q, userOrder); fb.innerHTML='Niepoprawnie. Twoja kolejność: <b>'+userOrder+'</b><br>Poprawna: <b>'+q.correct+'</b>'; }
   box.appendChild(fb);
   curSeq=[];
   $('next').classList.remove('hidden');
-  updateStats(); save();
+  updateStats(); saveState();
 }
 
-/* --- wynik odpowiedzi --- */
 function correct(q){
-  score++; streak++;
-  if(!q.isRetry){ answered++; }
-  delete wrongMap[q.id];
+  streak++;
+  if(!q.isRetry){ 
+    score++; 
+    answered++; 
+    globalXP++;
+  }
   bloomCorrect();
 }
-function mistake(q){
+
+function mistake(q, userAnswerStr){
   streak=0;
-  if(!q.isRetry){ answered++; }
-  wrongMap[q.id]=BANK.find(b=>b.id===q.id);
+  if(!q.isRetry){ 
+    answered++; 
+    if(!wrongMap[q.id]){
+       wrongMap[q.id] = { ref: BANK.find(b=>b.id===q.id), picked: userAnswerStr };
+    }
+  }
   bloomWrong();
-  // mechanizm powracających błędów: dodaj powtórkę dalej w kolejce
-  const retry={...wrongMap[q.id], isRetry:true, options:[...wrongMap[q.id].options]};
-  if(shuffleOn && !retry.correct.includes(',')) retry.options=shuffle(retry.options);
-  const pos=Math.min(queue.length, idx + 4 + Math.floor(Math.random()*4));
-  queue.splice(pos,0,retry);
+  
+  if(currentMode === 'normal') {
+      const baseQ = BANK.find(b=>b.id===q.id);
+      const retry = {...baseQ, isRetry:true, options:[...baseQ.options]};
+      if(shuffleOn && !retry.correct.includes(',')) retry.options=shuffle(retry.options);
+      const pos=Math.min(queue.length, idx + 4 + Math.floor(Math.random()*4));
+      queue.splice(pos,0,retry);
+  }
 }
 
 $('next').onclick=()=>{ idx++; if(idx>=queue.length) finish(); else showQuestion(); };
@@ -1450,37 +1535,78 @@ function finish(){
   $('quiz').classList.add('hidden');
   const s=$('summary'); s.classList.remove('hidden');
   $('fscore').textContent=score;
-  $('ftot').textContent=BANK.length;
-  $('fpct').textContent=Math.round(score/BANK.length*100);
+  $('ftot').textContent=activeBank.length;
+  $('fpct').textContent=Math.round(score/activeBank.length*100);
   const keys=Object.keys(wrongMap);
   const list=$('errlist'); list.innerHTML='';
+  
   if(keys.length){
     $('errs').classList.remove('hidden');
     keys.sort((a,b)=>a-b).forEach(k=>{
-      const q=wrongMap[k]; let ans='';
+      const errData = wrongMap[k];
+      const q = errData.ref;
+      const picked = errData.picked;
+      
+      const qText = `<div class="q">(${q.id}) ${q.text}</div>`;
+      const opts = `<div class="opts">` + q.options.map(o => `<div><b>${o.letter})</b> ${o.text}</div>`).join('') + `</div>`;
+
+      let pickedText = picked;
       if(!q.correct.includes(',')){
-        const o=q.options.find(o=>o.letter===q.correct);
-        ans=q.correct+') '+(o?o.text:'');
-      }else{
-        ans=q.correct.split(',').map(l=>{const o=q.options.find(o=>o.letter===l);return o?l+') '+o.text:l;}).join(' → ');
+         const po = q.options.find(o=>o.letter===picked);
+         if(po) pickedText = `<b>${po.letter})</b> ${po.text}`;
+      } else {
+         pickedText = picked.split(',').map(l=>{const o=q.options.find(x=>x.letter===l);return o?`<b>${l})</b> ${o.text}`:l;}).join(' → ');
       }
+      const badHTML = `<div class="a-bad">Zaznaczono: ${pickedText}</div>`;
+
+      let correctText = q.correct;
+      if(!q.correct.includes(',')){
+         const co = q.options.find(o=>o.letter===q.correct);
+         if(co) correctText = `<b>${co.letter})</b> ${co.text}`;
+      } else {
+         correctText = q.correct.split(',').map(l=>{const o=q.options.find(x=>x.letter===l);return o?`<b>${l})</b> ${o.text}`:l;}).join(' → ');
+      }
+      const goodHTML = `<div class="a-good">Poprawna odpowiedź: ${correctText}</div>`;
+
       const d=document.createElement('div'); d.className='err';
-      d.innerHTML='<div class="q">('+q.id+') '+q.text+'</div><div class="a">Poprawna: '+ans+'</div>';
+      d.innerHTML = qText + opts + badHTML + goodHTML;
       list.appendChild(d);
     });
   } else $('errs').classList.add('hidden');
-  clearSave();
+  clearState();
 }
 
 /* ============================================================
-   STEROWANIE
+   STEROWANIE SESJĄ I PRZEŁĄCZANIE TRYBÓW
    ============================================================ */
 $('shuffle-toggle').addEventListener('change', e=>{
   shuffleOn=e.target.checked;
   $('shuffle-switch').classList.toggle('on', shuffleOn);
-  // przebuduj świeżą sesję z nowym ustawieniem
   startFresh(true);
 });
+
+function toggleMode() {
+  saveState();
+  currentMode = (currentMode === 'normal') ? 'test' : 'normal';
+  localStorage.setItem('socjoQuiz_v2_currentMode', currentMode);
+  
+  updateUIForMode();
+  
+  if (loadState()) {
+    if (idx >= queue.length) {
+      startFresh(false);
+    } else {
+      $('summary').classList.add('hidden');
+      $('quiz').classList.remove('hidden');
+      applyBloom();
+      showQuestion();
+    }
+  } else {
+    if(currentMode === 'test') activeBank = shuffle([...BANK]).slice(0, 40);
+    else activeBank = BANK;
+    startFresh(false);
+  }
+}
 
 function startFresh(keepBloom){
   buildQueue();
@@ -1489,27 +1615,47 @@ function startFresh(keepBloom){
   applyBloom();
   $('summary').classList.add('hidden');
   $('quiz').classList.remove('hidden');
-  showQuestion(); save();
+  showQuestion(); saveState();
 }
 
 function restart(){ startFresh(false); }
-function resetSession(){ clearSave(); shuffleOn=true; $('shuffle-toggle').checked=true; $('shuffle-switch').classList.add('on'); startFresh(false); }
+
+function resetSession(){ 
+  if(score > 0 && !confirm("Zresetować bieżącą sesję? Obecny postęp zostanie utracony.")) return;
+  clearState();
+  if(currentMode === 'test') {
+      activeBank = shuffle([...BANK]).slice(0, 40); 
+  } else {
+      activeBank = BANK;
+  }
+  shuffleOn=true; 
+  $('shuffle-toggle').checked=true; 
+  $('shuffle-switch').classList.add('on');
+  startFresh(false); 
+}
 
 function init(){
-  if(load()){
+  const savedMode = localStorage.getItem('socjoQuiz_v2_currentMode');
+  if (savedMode) currentMode = savedMode;
+  
+  updateUIForMode();
+  
+  if(loadState()){
     $('shuffle-toggle').checked=shuffleOn;
     $('shuffle-switch').classList.toggle('on', shuffleOn);
     applyBloom();
     if(idx>=queue.length){ finish(); }
     else { $('summary').classList.add('hidden'); $('quiz').classList.remove('hidden'); showQuestion(); }
   } else {
+    if(currentMode === 'test') activeBank = shuffle([...BANK]).slice(0, 40);
+    else activeBank = BANK;
     $('shuffle-toggle').checked=true;
     $('shuffle-switch').classList.add('on');
+    updateStats();
     startFresh(false);
   }
 }
 
-/* skróty klawiszowe */
 document.addEventListener('keydown', e=>{
   if($('quiz').classList.contains('hidden')) return;
   const q=queue[idx]; if(!q) return;
