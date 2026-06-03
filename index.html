@@ -187,6 +187,15 @@ button.primary:hover{filter:brightness(1.12)}
 
 .hidden{display:none !important}
 
+/* Dyskretna sygnatura — widoczna po przyjrzeniu się, ale nierzucająca się w oczy */
+.credit{
+  margin-top:40px;text-align:center;
+  font-size:.72rem;letter-spacing:.08em;
+  color:var(--ink-soft);opacity:.4;
+  transition:opacity .2s ease;user-select:none;
+}
+.credit:hover{opacity:.75}
+
 /* Podsumowanie */
 #summary h2{font-family:"Fraunces",serif;font-weight:600;font-size:1.8rem;margin:0 0 6px}
 .score-big{font-family:"Fraunces",serif;font-size:3.2rem;font-weight:600;line-height:1;
@@ -212,6 +221,7 @@ button.primary:hover{filter:brightness(1.12)}
     <div class="stat"><div class="label">Pytanie</div><div class="val"><span id="cur">1</span><small> / <span id="tot">0</span></small></div></div>
     <div class="stat"><div class="label">Wynik</div><div class="val" id="score">0</div></div>
     <div class="stat" id="streak-stat"><div class="label">Seria</div><div class="val" id="streak">0</div></div>
+    <div class="stat" id="mastery-stat"><div class="label">Opanowane</div><div class="val"><span id="mastered-count">0</span><small> / <span id="bank-size">160</span></small></div></div>
   </div>
 
   <div class="toolbar">
@@ -232,7 +242,7 @@ button.primary:hover{filter:brightness(1.12)}
     <h2 id="question" style="font-family:'Fraunces',serif;font-weight:500;font-size:1.42rem;line-height:1.35;margin:0 0 22px">Ładowanie…</h2>
     <div id="options"></div>
     <button id="next" class="primary hidden">Następne pytanie <span class="kbd">Enter</span></button>
-    <div class="hints">Klawisze: wybór <span class="kbd">A</span>–<span class="kbd">E</span> · zatwierdź / dalej <span class="kbd">Enter</span></div>
+    <div class="hints">Klawisze: wybór <span class="kbd">A</span>–<span class="kbd">F</span> · zatwierdź / dalej <span class="kbd">Enter</span></div>
   </div>
 
   <div class="card hidden" id="summary">
@@ -246,6 +256,8 @@ button.primary:hover{filter:brightness(1.12)}
     </div>
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
+
+  <footer class="credit">Maciej Skiba | v1.3.2</footer>
 
 </div>
 
@@ -1237,7 +1249,7 @@ const answersText = `
    ============================================================ */
 function parseAll(){
   const key={};
-  answersText.replace(/\((\d+)\)\s*-\s*([a-e](?:,[a-e])*)/gi,(m,id,ans)=>{ key[id]=ans.toLowerCase(); return m; });
+  answersText.replace(/\((\d+)\)\s*-\s*([a-f](?:,[a-f])*)/gi,(m,id,ans)=>{ key[id]=ans.toLowerCase(); return m; });
   const lines = questionsText.split('\n');
   const out=[]; let cur=null;
   for(const raw of lines){
@@ -1258,6 +1270,9 @@ function parseAll(){
   return out;
 }
 const BANK = parseAll();
+if(!BANK.length){
+  try{ document.getElementById('question').textContent='Błąd: nie udało się wczytać bazy pytań.'; }catch(e){}
+}
 
 /* ============================================================
    STAN APLIKACJI I TRYBY
@@ -1272,6 +1287,23 @@ let curSeq=[];
 let isAnswered=false;
 let activeBank=BANK;   
 let globalXP=0;        
+
+/* ====== POWTÓRKI W OBRĘBIE SESJI (expanding spaced retrieval) ======
+   Po błędzie karta wraca po krótkim (ale nie zerowym) odstępie. Po pierwszym
+   udanym przypomnieniu planowane jest POTWIERDZENIE z większym odstępem.
+   Karta „domyka się" w sesji dopiero po udanym potwierdzeniu (spaced success). */
+const RETRY_GAP_RELEARN = [3, 5];    // odstęp po błędzie (krótki, nie natychmiast)
+const RETRY_GAP_CONFIRM = [11, 18];  // odstęp potwierdzenia po pierwszym sukcesie (rozszerzony)
+const LAPSE_EXPANSION   = 3;         // każdy kolejny błąd tej samej karty dodatkowo ją oddala
+const MAX_LAPSES        = 6;         // bezpiecznik: limit ponownych wstawień jednej karty w sesji
+
+/* ====== TRWAŁE OPANOWANIE MIĘDZY SESJAMI (tylko tryb nauki) ======
+   Lekka warstwa do nauki rozłożonej na dni: słabe/nowe karty są ustawiane
+   na początku zestawu, opanowane wędrują na koniec jako lekka powtórka.
+   To NIE jest pełny harmonogram SR — kalibracja odstępów dzieje się w sesji. */
+const MASTERY_KEY = 'socjoQuiz_v2_mastery';
+const MASTERY_GRADUATE = 2; // ile poprawnych „za pierwszym razem" (w różnych sesjach) = opanowane
+let mastery = {};           // { [id]: liczba } 0 = słabe, >=GRADUATE = opanowane, brak klucza = nowe
 
 // System nagrody wizualnej
 let bloom=0, peak=0;
@@ -1289,16 +1321,72 @@ const LEVELS = [
 
 function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
 
-function buildQueue(){
-  // Lokalne wymuszenie tasowania w trybie testu, niezależnie od ustawień użytkownika
-  const forceShuffle = currentMode === 'test' ? true : shuffleOn;
-  
-  let base = forceShuffle ? shuffle(activeBank) : [...activeBank];
-  queue = base.map(q=>{
+/* --- Trwałe opanowanie: odczyt/zapis/klasyfikacja --- */
+function loadMastery(){
+  try{ const m=JSON.parse(localStorage.getItem(MASTERY_KEY)); if(m && typeof m==='object') mastery=m; }catch(e){}
+}
+function saveMastery(){
+  try{ localStorage.setItem(MASTERY_KEY, JSON.stringify(mastery)); }catch(e){}
+}
+function masteryBucket(id){
+  if(!(id in mastery)) return 'new';
+  return mastery[id] >= MASTERY_GRADUATE ? 'mastered' : 'weak';
+}
+// op: +1 (wzmocnij) lub 'reset' (błąd kasuje opanowanie). Działa tylko w trybie nauki.
+function bumpMastery(id, op){
+  if(currentMode !== 'normal') return;
+  let v = (id in mastery) ? mastery[id] : 0;
+  v = (op === 'reset') ? 0 : Math.min(MASTERY_GRADUATE + 1, v + op);
+  mastery[id] = v;
+  saveMastery();
+}
+function masteredCount(){
+  return BANK.reduce((n,q)=> n + (masteryBucket(q.id)==='mastered' ? 1 : 0), 0);
+}
+
+/* --- Klonowanie pytania do kolejki --- */
+function cloneForQueue(useShuffle){
+  return q=>{
     const clone={...q, isRetry:false, options:[...q.options]};
-    if(forceShuffle && !q.correct.includes(',')) clone.options = shuffle(clone.options);
+    if(useShuffle && !q.correct.includes(',')) clone.options = shuffle(clone.options);
     return clone;
-  });
+  };
+}
+
+function buildQueue(){
+  // Test: zawsze losowa kolejność i losowe opcje, bez priorytetyzacji.
+  if(currentMode === 'test'){
+    queue = shuffle(activeBank).map(cloneForQueue(true));
+    return;
+  }
+  // Tryb nauki z tasowaniem: słabe (wcześniej błędne) → nowe → opanowane (lekka powtórka).
+  if(shuffleOn){
+    const weak=[], fresh=[], mastered=[];
+    activeBank.forEach(q=>{
+      const b=masteryBucket(q.id);
+      (b==='weak' ? weak : b==='new' ? fresh : mastered).push(q);
+    });
+    const ordered=[...shuffle(weak), ...shuffle(fresh), ...shuffle(mastered)];
+    queue = ordered.map(cloneForQueue(true));
+  } else {
+    // Tasowanie wyłączone = świadomy przegląd po numerach 1..N (bez priorytetyzacji).
+    queue = [...activeBank].map(cloneForQueue(false));
+  }
+}
+
+/* --- Planowanie powtórki z rozszerzającym się odstępem --- */
+function gapFrom(range){ const [lo,hi]=range; return lo + Math.floor(Math.random()*(hi-lo+1)); }
+
+function insertRetry(srcQ, stage, lapses){
+  const baseQ = BANK.find(b=>b.id===srcQ.id);
+  if(!baseQ) return;
+  const retry = {...baseQ, isRetry:true, stage, lapses, options:[...baseQ.options]};
+  const useShuffle = currentMode === 'test' ? true : shuffleOn;
+  if(useShuffle && !retry.correct.includes(',')) retry.options = shuffle(retry.options);
+  const base = (stage === 'confirm') ? gapFrom(RETRY_GAP_CONFIRM) : gapFrom(RETRY_GAP_RELEARN);
+  const extra = Math.max(0, lapses - 1) * LAPSE_EXPANSION;   // im więcej powtórnych błędów, tym dalej
+  const pos = Math.min(queue.length, idx + base + extra);
+  queue.splice(pos, 0, retry);
 }
 
 /* ============================================================
@@ -1397,6 +1485,10 @@ function updateStats(){
   $('streak').textContent = streak;
   $('progress').firstElementChild.style.width = (answered/activeBank.length*100)+'%';
 
+  const mc=$('mastered-count'), bs=$('bank-size');
+  if(mc) mc.textContent = masteredCount();
+  if(bs) bs.textContent = BANK.length;
+
   let curLvl = LEVELS[0], nextLvl = LEVELS[1];
   for(let i=0; i<LEVELS.length; i++){
     if(globalXP >= LEVELS[i].req){
@@ -1409,14 +1501,17 @@ function updateStats(){
 }
 
 function updateUIForMode(){
+  const mstat=$('mastery-stat');
   if(currentMode === 'test') {
       $('btn-mode').textContent = "Wróć do bazy nauki";
       $('brand-em').textContent = "— Test (40 pytań)";
       $('shuffle-switch').classList.add('hidden'); // Ukrycie widoczności dla testu
+      if(mstat) mstat.classList.add('hidden');     // opanowanie kształtuje tylko tryb nauki
   } else {
       $('btn-mode').textContent = "Przejdź do Testu (40 pytań)";
       $('brand-em').textContent = "— Baza pytań";
       $('shuffle-switch').classList.remove('hidden'); // Przywrócenie dla bazy
+      if(mstat) mstat.classList.remove('hidden');
   }
 }
 
@@ -1426,6 +1521,11 @@ function showQuestion(){
   const q=queue[idx];
   
   $('retry-badge').classList.toggle('hidden', !q.isRetry);
+  if(q.isRetry){
+    $('retry-badge').textContent = (q.stage === 'confirm')
+      ? '✓ Potwierdzenie — wcześniej błędne'
+      : '⟳ Powtórka — wcześniej błędne';
+  }
   $('qnum').textContent='Pytanie '+(currentMode === 'test' ? (answered+1) : q.id);
   $('question').textContent=q.text;
   $('next').classList.add('hidden');
@@ -1502,30 +1602,37 @@ function checkSeq(q,box,btn){
 
 function correct(q){
   streak++;
-  if(!q.isRetry){ 
-    score++; 
-    answered++; 
-    globalXP++;
+  if(!q.isRetry){
+    // Pierwsze podejście do pytania — liczy się do wyniku, XP i opanowania.
+    score++; answered++; globalXP++;
+    bumpMastery(q.id, +1);
+  } else if(currentMode === 'normal'){
+    if(q.stage === 'relearn'){
+      // Pierwszy sukces po błędzie → zaplanuj POTWIERDZENIE z większym odstępem (spaced success).
+      insertRetry(q, 'confirm', q.lapses || 1);
+    } else if(q.stage === 'confirm'){
+      // Udane potwierdzenie po dłuższym odstępie → karta domknięta w sesji + wzmocnienie trwałe.
+      bumpMastery(q.id, +1);
+    }
   }
   bloomCorrect();
 }
 
 function mistake(q, userAnswerStr){
   streak=0;
-  if(!q.isRetry){ 
-    answered++; 
+  const lapses = (q.lapses || 0) + 1;
+  if(!q.isRetry){
+    answered++;
     if(!wrongMap[q.id]){
-       wrongMap[q.id] = { ref: BANK.find(b=>b.id===q.id), picked: userAnswerStr };
+      wrongMap[q.id] = { ref: BANK.find(b=>b.id===q.id), picked: userAnswerStr };
     }
   }
+  bumpMastery(q.id, 'reset'); // błąd kasuje trwałe opanowanie → priorytet w kolejnych sesjach
   bloomWrong();
-  
-  if(currentMode === 'normal') {
-      const baseQ = BANK.find(b=>b.id===q.id);
-      const retry = {...baseQ, isRetry:true, options:[...baseQ.options]};
-      if(shuffleOn && !retry.correct.includes(',')) retry.options=shuffle(retry.options);
-      const pos=Math.min(queue.length, idx + 4 + Math.floor(Math.random()*4));
-      queue.splice(pos,0,retry);
+
+  // Ponowne wstawienie tylko w trybie nauki i do limitu (bezpiecznik przed niekończącą się sesją).
+  if(currentMode === 'normal' && lapses <= MAX_LAPSES){
+    insertRetry(q, 'relearn', lapses);
   }
 }
 
@@ -1580,7 +1687,19 @@ function finish(){
    STEROWANIE SESJĄ I PRZEŁĄCZANIE TRYBÓW
    ============================================================ */
 $('shuffle-toggle').addEventListener('change', e=>{
-  shuffleOn=e.target.checked;
+  // Tasowanie to ustawienie STARTOWE zestawu. W trybie testu nie działa w ogóle.
+  if(currentMode === 'test'){
+    e.target.checked = shuffleOn;            // cofnij — w teście kolejność jest stała
+    $('shuffle-switch').classList.toggle('on', shuffleOn);
+    return;
+  }
+  // Sesja w toku → zmiana ułoży zestaw od nowa. Ostrzeż, zamiast po cichu kasować postęp.
+  if(answered > 0 && !confirm("Zmiana tasowania ułoży zestaw od nowa i wyzeruje postęp BIEŻĄCEJ sesji (trwałe opanowanie zostaje). Kontynuować?")){
+    e.target.checked = shuffleOn;            // cofnij przełącznik do poprzedniego stanu
+    $('shuffle-switch').classList.toggle('on', shuffleOn);
+    return;
+  }
+  shuffleOn = e.target.checked;
   $('shuffle-switch').classList.toggle('on', shuffleOn);
   startFresh(true);
 });
@@ -1635,6 +1754,7 @@ function resetSession(){
 }
 
 function init(){
+  loadMastery();
   const savedMode = localStorage.getItem('socjoQuiz_v2_currentMode');
   if (savedMode) currentMode = savedMode;
   
@@ -1666,7 +1786,7 @@ document.addEventListener('keydown', e=>{
   }
   if(!isAnswered && !q.correct.includes(',')){
     const k=e.key.toLowerCase();
-    if('abcde'.includes(k)){
+    if('abcdef'.includes(k)){
       document.querySelectorAll('.option').forEach(o=>{ if(o.dataset.letter===k) o.click(); });
     }
   }
