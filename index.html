@@ -246,6 +246,25 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
   100% {opacity:0;transform:scale(.96)}  /* wolniejsze zniknięcie */
 }
 
+/* ====== Celebracja — deszcz kotów po ukończeniu całej bazy (180 pytań) ====== */
+#cat-rain{position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden}
+.cat-drop{
+  position:absolute;top:-12vh;will-change:transform,opacity;user-select:none;
+  animation-name:catRain;animation-timing-function:cubic-bezier(.45,.12,.7,1);animation-fill-mode:forwards;
+}
+@keyframes catRain{
+  0%   {transform:translate(0,-12vh) rotate(0);opacity:0}
+  8%   {opacity:1}
+  90%  {opacity:1}
+  100% {transform:translate(var(--drift,0),116vh) rotate(var(--spin,360deg));opacity:.9}
+}
+#completion-banner{
+  margin:0 0 16px;padding:14px 16px;border-radius:14px;text-align:center;
+  font-weight:700;font-size:1.05rem;
+  background:var(--ok-bg);border:1px solid var(--ok-bd);color:#d6f5e6;
+  animation:rise .5s cubic-bezier(.2,.7,.2,1);
+}
+
 /* ====== „Co nowego?" — dyskretny przycisk + pływające okienko ====== */
 .whatsnew-wrap{text-align:center;margin-top:6px}
 .whatsnew-btn{
@@ -326,6 +345,7 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
   </div>
 
   <div class="card hidden" id="summary">
+    <div id="completion-banner" class="hidden">🐱 Gratulacje! Ukończono wszystkie 180 pytań! 🎉</div>
     <h2>Podsumowanie</h2>
     <p style="color:var(--ink-soft);margin-top:0">Wynik z pierwszej próby</p>
     <div class="score-big"><span id="fscore">0</span> / <span id="ftot">0</span></div>
@@ -337,7 +357,7 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
-  <footer class="credit">Maciej Skiba | v1.5.2</footer>
+  <footer class="credit">Maciej Skiba | v1.5.3</footer>
   <div class="whatsnew-wrap">
     <button class="whatsnew-btn" onclick="openWhatsNew()">Co nowego?</button>
   </div>
@@ -1940,6 +1960,16 @@ function finish(){
       list.appendChild(d);
     });
   } else $('errs').classList.add('hidden');
+
+  // Celebracja po ukończeniu CAŁEJ bazy (tryb nauki, nie test).
+  const banner = $('completion-banner');
+  if(currentMode === 'normal' && answered >= activeBank.length){
+    if(banner) banner.classList.remove('hidden');
+    celebrateCompletion();
+  } else if(banner){
+    banner.classList.add('hidden');
+  }
+
   clearState();
 }
 
@@ -2219,6 +2249,34 @@ function registerCat(key){
     c.target = newCatThreshold();
   }
   saveCatState();
+}
+
+/* Celebracja ukończenia całej bazy — emotki kotów spadające „z nieba". */
+const CAT_EMOJIS = ['🐱','😸','😹','😻','😺','😼','😽','🙀','🐈','😿','😾'];
+function celebrateCompletion(){
+  // Uszanuj preferencję ograniczenia animacji — baner i tak zostaje.
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const layer = document.createElement('div');
+  layer.id = 'cat-rain';
+  const count = 50;
+  let maxEnd = 0;
+  for(let i=0;i<count;i++){
+    const s = document.createElement('span');
+    s.className = 'cat-drop';
+    s.textContent = CAT_EMOJIS[Math.floor(Math.random()*CAT_EMOJIS.length)];
+    const dur   = 2.6 + Math.random()*2.8;          // czas spadania 2.6–5.4 s
+    const delay = Math.random()*2.6;                // rozłożenie w czasie 0–2.6 s
+    s.style.left = (Math.random()*100) + 'vw';
+    s.style.fontSize = (1.2 + Math.random()*1.8) + 'rem';
+    s.style.setProperty('--spin', (Math.random()*720 - 360).toFixed(0) + 'deg');
+    s.style.setProperty('--drift', (Math.random()*16 - 8).toFixed(1) + 'vw');
+    s.style.animationDuration = dur.toFixed(2) + 's';
+    s.style.animationDelay = delay.toFixed(2) + 's';
+    layer.appendChild(s);
+    maxEnd = Math.max(maxEnd, dur + delay);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), (maxEnd + 0.5) * 1000);
 }
 
 function init(){
