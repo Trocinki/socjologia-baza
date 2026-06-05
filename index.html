@@ -102,6 +102,12 @@ header.top{
   transition:.2s;
 }
 .btn-reset:hover{border-color:var(--no-bd);color:var(--no)}
+.btn-io{
+  background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+  padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.85rem;font-family:inherit;
+  transition:.2s;
+}
+.btn-io:hover{border-color:var(--accent);color:var(--accent)}
 .btn-mode{
   background:transparent;border:1px solid var(--accent);color:var(--accent);
   padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.85rem;font-family:inherit;
@@ -238,6 +244,43 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
   50%  {opacity:1;transform:scale(1)}    /* chwila widoczności */
   100% {opacity:0;transform:scale(.96)}  /* wolniejsze zniknięcie */
 }
+
+/* ====== „Co nowego?" — dyskretny przycisk + pływające okienko ====== */
+.whatsnew-wrap{text-align:center;margin-top:6px}
+.whatsnew-btn{
+  background:none;border:none;cursor:pointer;font-family:inherit;
+  font-size:.72rem;letter-spacing:.08em;color:var(--ink-soft);
+  opacity:.4;transition:opacity .2s ease,color .2s ease;
+  text-decoration:underline;text-underline-offset:3px;
+}
+.whatsnew-btn:hover{opacity:.85;color:var(--accent)}
+
+.wn-overlay{
+  position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;
+  background:hsl(var(--bg-h) 40% 2% / .6);backdrop-filter:blur(3px);
+  animation:wnFade .2s ease;
+}
+.wn-modal{
+  position:relative;max-width:430px;width:100%;max-height:82vh;overflow:auto;
+  background:hsl(var(--surface-h) var(--surface-s) calc(var(--surface-l) + 2%) / .98);
+  border:1px solid var(--line);border-radius:18px;padding:24px 24px 18px;
+  box-shadow:0 30px 80px -20px hsl(var(--bg-h) 40% 2% / .9);
+  animation:wnRise .25s cubic-bezier(.2,.7,.2,1);
+}
+.wn-modal h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.45rem;margin:0 0 4px;padding-right:28px}
+.wn-modal .wn-ver{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);margin-bottom:12px}
+.wn-close{
+  position:absolute;top:12px;right:14px;background:none;border:none;cursor:pointer;
+  color:var(--ink-soft);font-size:1.6rem;line-height:1;transition:color .2s;
+}
+.wn-close:hover{color:var(--ink)}
+.wn-list{list-style:none;margin:0;padding:0}
+.wn-list li{padding:11px 0;border-top:1px solid var(--line);font-size:.93rem;line-height:1.55;color:var(--ink-soft)}
+.wn-list li:first-child{border-top:none}
+.wn-list b{color:var(--ink)}
+.wn-list .wn-em{color:var(--accent);font-weight:600}
+@keyframes wnFade{from{opacity:0}to{opacity:1}}
+@keyframes wnRise{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -262,7 +305,10 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
       <span class="label-txt">Tasowanie</span>
     </label>
     <button class="btn-mode" id="btn-mode" onclick="toggleMode()">Przejdź do Testu (40 pytań)</button>
+    <button class="btn-io" onclick="exportProgress()" title="Zapisz postęp do pliku">⭳ Eksport</button>
+    <button class="btn-io" onclick="document.getElementById('import-file').click()" title="Wczytaj postęp z pliku">⭱ Import</button>
     <button class="btn-reset" onclick="resetSession()">Reset sesji</button>
+    <input type="file" id="import-file" accept="application/json,.json" class="hidden">
   </div>
 
   <div id="progress"><div></div></div>
@@ -289,8 +335,26 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
-  <footer class="credit">Maciej Skiba | v1.4.1</footer>
+  <footer class="credit">Maciej Skiba | v1.5.1</footer>
+  <div class="whatsnew-wrap">
+    <button class="whatsnew-btn" onclick="openWhatsNew()">Co nowego?</button>
+  </div>
 
+</div>
+
+<div id="whatsnew-overlay" class="wn-overlay hidden" onclick="if(event.target===this) closeWhatsNew()">
+  <div class="wn-modal" role="dialog" aria-modal="true" aria-labelledby="wn-title">
+    <button class="wn-close" onclick="closeWhatsNew()" aria-label="Zamknij">×</button>
+    <h3 id="wn-title">Co nowego?</h3>
+    <div class="wn-ver">Najnowsze zmiany</div>
+    <ul class="wn-list">
+      <li><b>Eksport i import postępu.</b> Jeśli zacząłeś/aś naukę na telefonie i chcesz kontynuować na laptopie z zachowaniem obecnego postępu — kliknij <span class="wn-em">Eksport</span> na jednym urządzeniu, przenieś pobrany plik na drugie, a tam kliknij <span class="wn-em">Import</span> i wybierz ten plik.</li>
+      <li><b>Przycisk „Nie znam odpowiedzi".</b> Od razu pokazuje poprawną odpowiedź na zielono, a pytanie zostaje zaliczone jako błędne, żeby wróciło do Ciebie w powtórkach.</li>
+      <li><b>Ulepszony system powtórek.</b> Błędne pytania wracają w przemyślanych odstępach i „domykają się" dopiero, gdy odpowiesz dobrze po dłuższej przerwie.</li>
+      <li><b>Poziomy.</b> Za poprawne odpowiedzi zdobywasz XP i awansujesz: Obserwator → Adept → Badacz → Socjolog → Ekspert → …</li>
+      <li><b>meow?🐱</b> Ucz się dalej (albo myl się dalej) — sam/a się przekonasz…</li>
+    </ul>
+  </div>
 </div>
 
 <script>
@@ -1932,7 +1996,74 @@ function startFresh(keepBloom){
 
 function restart(){ startFresh(false); }
 
-function resetSession(){ 
+/* ============================================================
+   EKSPORT / IMPORT POSTĘPU
+   ============================================================
+   Cały postęp siedzi w localStorage pod kluczami „socjoQuiz_v2_*"
+   (opanowanie pytań, XP/poziom, bieżące sesje, liczniki kotów).
+   localStorage jest osobny dla każdej przeglądarki/urządzenia, więc
+   eksport do pliku pozwala przenieść postęp np. z laptopa na telefon. */
+const SAVE_PREFIX = 'socjoQuiz_v2_';
+
+function collectProgress(){
+  const data = {};
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith(SAVE_PREFIX)) data[k] = localStorage.getItem(k);
+  }
+  return data;
+}
+
+function exportProgress(){
+  // Najpierw zapisz bieżący stan, żeby plik zawierał najświeższy postęp.
+  try{ saveState(); saveMastery(); saveCatState(); }catch(e){}
+  const payload = {
+    app: 'socjologia-baza',
+    schema: 1,
+    exportedAt: new Date().toISOString(),
+    data: collectProgress()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'socjologia-postep-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importProgress(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try{
+      const parsed = JSON.parse(reader.result);
+      data = (parsed && parsed.data && typeof parsed.data==='object') ? parsed.data : parsed;
+    }catch(e){ alert('Nieprawidłowy plik — to nie jest poprawny plik postępu (.json).'); return; }
+    const keys = data && typeof data==='object'
+      ? Object.keys(data).filter(k => k.startsWith(SAVE_PREFIX)) : [];
+    if(!keys.length){ alert('W pliku nie znaleziono danych postępu.'); return; }
+    if(!confirm('Wczytać postęp z pliku? Obecny postęp na TYM urządzeniu zostanie nadpisany.')) return;
+    // Usuń bieżący postęp, potem wgraj z pliku (czysty stan, bez resztek).
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(SAVE_PREFIX)) localStorage.removeItem(k);
+    }
+    keys.forEach(k => { try{ localStorage.setItem(k, data[k]); }catch(e){} });
+    alert('Postęp wczytany. Strona zostanie odświeżona.');
+    location.reload();
+  };
+  reader.onerror = () => alert('Nie udało się odczytać pliku.');
+  reader.readAsText(file);
+}
+
+$('import-file').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) importProgress(f);
+  e.target.value = '';   // pozwól ponownie wybrać ten sam plik
+});
+
+function resetSession(){
   if(score > 0 && !confirm("Zresetować bieżącą sesję? Obecny postęp zostanie utracony.")) return;
   clearState();
   if(currentMode === 'test') {
@@ -2112,7 +2243,15 @@ function init(){
   }
 }
 
+/* ====== Okienko „Co nowego?" ====== */
+function openWhatsNew(){ $('whatsnew-overlay').classList.remove('hidden'); }
+function closeWhatsNew(){ $('whatsnew-overlay').classList.add('hidden'); }
 document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && !$('whatsnew-overlay').classList.contains('hidden')) closeWhatsNew();
+});
+
+document.addEventListener('keydown', e=>{
+  if(!$('whatsnew-overlay').classList.contains('hidden')) return; // okienko otwarte → nie łap skrótów quizu
   if($('quiz').classList.contains('hidden')) return;
   const q=queue[idx]; if(!q) return;
   if(e.key==='Enter'){
