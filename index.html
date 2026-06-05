@@ -207,6 +207,37 @@ button.primary:hover{filter:brightness(1.12)}
 .err .opts b{color:var(--ink)}
 .err .a-bad{color:#ffd7dc;background:var(--no-bg);border:1px solid var(--no-bd);padding:9px 12px;border-radius:8px;margin-bottom:8px;font-size:.95rem}
 .err .a-good{color:#d6f5e6;background:var(--ok-bg);border:1px solid var(--ok-bd);padding:9px 12px;border-radius:8px;font-size:.95rem}
+
+/* ====== Poprawka: nazwa poziomu nie wychodzi poza ramkę ====== */
+#xp-stat{flex:1.4;min-width:138px}
+#xp-stat .val{font-size:1.15rem;line-height:1.2}
+#xp-stat .val #lvl-name{overflow-wrap:anywhere}
+#xp-stat .val small{font-size:.7rem}
+
+/* ====== Przycisk „Nie znam odpowiedzi" ====== */
+button.ghost{
+  margin-top:14px;width:100%;cursor:pointer;font-family:inherit;
+  background:transparent;border:1px dashed var(--line);color:var(--ink-soft);
+  padding:13px;font-size:.92rem;font-weight:600;border-radius:12px;transition:.2s;
+}
+button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no-bg)}
+
+/* ====== Nagroda — losowy kot (NAGLE się pojawia, wolniej znika) ====== */
+#cat-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;pointer-events:none}
+.cat-pop{
+  max-width:min(70vw,460px);max-height:60vh;width:auto;height:auto;
+  border-radius:16px;                                   /* delikatnie zaokrąglone rogi */
+  box-shadow:0 24px 70px -12px rgba(0,0,0,.65),0 0 0 4px rgba(255,255,255,.07);
+  animation:catPop 2.4s cubic-bezier(.2,.7,.2,1) forwards;
+  will-change:transform,opacity;
+}
+@keyframes catPop{
+  0%   {opacity:0;transform:scale(.3)}   /* BUM — */
+  5%   {opacity:1;transform:scale(1.12)} /* — nagłe pojawienie z lekkim przeskalowaniem */
+  12%  {opacity:1;transform:scale(1)}
+  50%  {opacity:1;transform:scale(1)}    /* chwila widoczności */
+  100% {opacity:0;transform:scale(.96)}  /* wolniejsze zniknięcie */
+}
 </style>
 </head>
 <body>
@@ -241,6 +272,7 @@ button.primary:hover{filter:brightness(1.12)}
     <div id="qnum">Pytanie 1</div>
     <h2 id="question" style="font-family:'Fraunces',serif;font-weight:500;font-size:1.42rem;line-height:1.35;margin:0 0 22px">Ładowanie…</h2>
     <div id="options"></div>
+    <button id="dontknow" class="ghost hidden" onclick="giveUp()">Nie znam odpowiedzi</button>
     <button id="next" class="primary hidden">Następne pytanie <span class="kbd">Enter</span></button>
     <div class="hints">Klawisze: wybór <span class="kbd">A</span>–<span class="kbd">F</span> · zatwierdź / dalej <span class="kbd">Enter</span></div>
   </div>
@@ -257,7 +289,7 @@ button.primary:hover{filter:brightness(1.12)}
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
-  <footer class="credit">Maciej Skiba | v1.3.3</footer>
+  <footer class="credit">Maciej Skiba | v1.4.1</footer>
 
 </div>
 
@@ -1359,10 +1391,10 @@ const answersText = `
 (101)-e (102)-c (103)-b (104)-c (105)-d (106)-d (107)-d (108)-c (109)-d (110)-d
 (111)-c (112)-b (113)-c (114)-c (115)-c (116)-c (117)-b (118)-c (119)-d (120)-a
 (121)-c (122)-c (123)-d (124)-b (125)-b (126)-a (127)-b (128)-a (129)-d (130)-c
-(131)-b (132)-a (133)-c (134)-c (135)-b (136)-b (137)-b (138)-b (139)-b (140)-c
+(131)-c (132)-a (133)-c (134)-c (135)-b (136)-b (137)-b (138)-b (139)-b (140)-c
 (141)-c (142)-d (143)-b (144)-c (145)-c (146)-c (147)-d (148)-c (149)-d (150)-b
 (151)-b (152)-e (153)-b (154)-d (155)-d (156)-b (157)-c,e,a,b,d (158)-c (159)-c (160)-a
-(161)-b (162)-b (163)-b (164)-d (165)-b (166)-b (167)-a (168)-a (169)-e (170)-c
+(161)-b (162)-b (163)-b (164)-d (165)-b (166)-b (167)-c (168)-a (169)-e (170)-c
 (171)-e (172)-c (173)-a (174)-d (175)-e (176)-b (177)-c (178)-d (179)-a (180)-d
 `;
 
@@ -1651,7 +1683,8 @@ function showQuestion(){
   $('qnum').textContent='Pytanie '+(currentMode === 'test' ? (answered+1) : q.id);
   $('question').textContent=q.text;
   $('next').classList.add('hidden');
-  
+  $('dontknow').classList.remove('hidden');
+
   const box=$('options'); box.innerHTML='';
 
   if(q.correct.includes(',')){ renderSeq(q,box); return; }
@@ -1668,6 +1701,7 @@ function showQuestion(){
 
 function selectOption(el, letter, q){
   isAnswered=true;
+  $('dontknow').classList.add('hidden');
   document.querySelectorAll('.option').forEach(o=>{
     o.classList.add('disabled');
     if(o.dataset.letter===q.correct) o.classList.add('correct');
@@ -1709,6 +1743,7 @@ function drawSeq(q,box){
 }
 function checkSeq(q,box,btn){
   if(isAnswered) return; isAnswered=true; btn.remove();
+  $('dontknow').classList.add('hidden');
   const userOrder=curSeq.map(o=>o.letter).join(',');
   const ok=userOrder===q.correct;
   box.querySelectorAll('.seq .ctrl button').forEach(b=>b.disabled=true);
@@ -1737,6 +1772,7 @@ function correct(q){
       bumpMastery(q.id, +1);
     }
   }
+  registerCat('good');
   bloomCorrect();
 }
 
@@ -1751,11 +1787,46 @@ function mistake(q, userAnswerStr){
   }
   bumpMastery(q.id, 'reset'); // błąd kasuje trwałe opanowanie → priorytet w kolejnych sesjach
   bloomWrong();
+  registerCat('bad');
 
   // Ponowne wstawienie tylko w trybie nauki i do limitu (bezpiecznik przed niekończącą się sesją).
   if(currentMode === 'normal' && lapses <= MAX_LAPSES){
     insertRetry(q, 'relearn', lapses);
   }
+}
+
+/* „Nie znam odpowiedzi" — odsłania poprawną odpowiedź na zielono i zalicza
+   pytanie jako błędne (uruchamia mechanizm powtórek tak jak zwykły błąd). */
+function giveUp(){
+  if(isAnswered) return;
+  const q=queue[idx]; if(!q) return;
+  $('dontknow').classList.add('hidden');
+  isAnswered=true;
+  const box=$('options');
+
+  if(q.correct.includes(',')){
+    // Pytanie sekwencyjne — ustaw i pokaż poprawną kolejność na zielono.
+    const checkBtn=box.querySelector('#checkseq'); if(checkBtn) checkBtn.remove();
+    const order=q.correct.split(',');
+    curSeq.sort((a,b)=>order.indexOf(a.letter)-order.indexOf(b.letter));
+    drawSeq(q,box);
+    box.querySelectorAll('.seq .ctrl button').forEach(b=>b.disabled=true);
+    box.querySelectorAll('.seq').forEach(s=>s.classList.add('ok-seq'));
+    const fb=document.createElement('div'); fb.className='feedback no';
+    const correctText=order.map(l=>{const o=q.options.find(x=>x.letter===l);return o?o.text:l;}).join(' → ');
+    fb.innerHTML='Pytanie zaliczone jako błędne. Poprawna kolejność: <b>'+correctText+'</b>';
+    box.appendChild(fb);
+    curSeq=[];
+  } else {
+    // Pytanie jednokrotnego wyboru — podświetl poprawną opcję na zielono.
+    document.querySelectorAll('.option').forEach(o=>{
+      o.classList.add('disabled');
+      if(o.dataset.letter===q.correct) o.classList.add('correct');
+    });
+  }
+  mistake(q, '(nie znam odpowiedzi)');
+  $('next').classList.remove('hidden');
+  updateStats(); saveState();
 }
 
 $('next').onclick=()=>{ idx++; if(idx>=queue.length) finish(); else showQuestion(); };
@@ -1875,8 +1946,151 @@ function resetSession(){
   startFresh(false); 
 }
 
+/* ============================================================
+   NAGRODA — LOSOWY KOT  (foldery „dobrze" / „zle")
+   ============================================================
+   Po wylosowanej liczbie (10–30) poprawnych odpowiedzi pojawia się kot
+   z folderu „dobrze", a po analogicznej liczbie błędnych — z folderu „zle".
+   Licznik startuje od pierwszej odpowiedzi danego typu i zeruje się po
+   każdym pokazanym kocie (z nowo wylosowanym progiem).
+   Zdjęcia są odczytywane z folderu, gdy strona jest serwowana po HTTP;
+   przy otwarciu pliku z dysku używana jest lista zapasowa poniżej. */
+const CAT_DIRS = { good:'dobrze', bad:'zle' };
+const CAT_EXT  = /\.(jpe?g|png|gif|webp|avif|bmp)$/i;
+const CAT_MIN  = 10, CAT_MAX = 30;
+
+// Lista zapasowa — używana, gdy nie da się odczytać zawartości folderu (plik z dysku).
+const CAT_FALLBACK = {
+  good: [
+    "00886ad035d6b7ae082fbcff766c043c.jpg","0e79beabeb6a60551f3fa044778a6d72.jpg",
+    "2c4885d467eb72239225028e2d1f4804.jpg","3-kotek.gif",
+    "40b6f3b77b0f526a28ba75a927df668d.jpg","4561-funny-cat-29.png",
+    "a73f6073c40925b29adffadd062aeeef.jpg","funny-cat-pic-v0-tyzusvmzmr7a1.jpg",
+    "goofy-ahh-picture-rr1ke3fqtb7gfind.jpg","goofy-funny-cat.gif","hq720.jpg",
+    "images (3).jpg","images (4).jpg","premium_photo-1677545183884-421157b2da02.avif"
+  ],
+  bad: [
+    "1b0aaf7e1a24a4ab26a886406d2c59d8.jpg","355256d03a154675b096096e0a0eb038.jpg",
+    "56701d7c5b5cf49f4e0f4adaf35e0d31.jpg","97df8142297e40f889bb3072a0d0bf0f.jpg",
+    "Funny-Cat-Pfp-Meme.jpg.webp","cat-side-eye.gif",
+    "crying-cat-meme-template-thumbnail-4e806a85.webp","ee4729624a55e50a603407685d1ae25c.jpg",
+    "flat,750x,075,f-pad,750x1000,f8f8f8.jpg","images (1).jpg","images (2).jpg",
+    "images.jpg","images1.jpg","images2.jpg","noFilter.webp"
+  ]
+};
+
+let catFiles  = { good:[...CAT_FALLBACK.good], bad:[...CAT_FALLBACK.bad] };
+let recentCats = [];                          // ostatnio pokazane („typ/plik"), maks. 2
+const CAT_STATE_KEY = 'socjoQuiz_v2_cats';
+function newCatThreshold(){ return CAT_MIN + Math.floor(Math.random()*(CAT_MAX-CAT_MIN+1)); }
+let catCounters = { good:{n:0,target:newCatThreshold()}, bad:{n:0,target:newCatThreshold()} };
+
+function saveCatState(){
+  try{ localStorage.setItem(CAT_STATE_KEY, JSON.stringify({catCounters, recentCats})); }catch(e){}
+}
+function loadCatState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(CAT_STATE_KEY));
+    if(s && s.catCounters){ catCounters=s.catCounters; recentCats=Array.isArray(s.recentCats)?s.recentCats:[]; }
+  }catch(e){}
+  // Dostosuj zapisane progi do aktualnego zakresu (np. po zmianie CAT_MIN/CAT_MAX),
+  // żeby nowy zakres działał od razu, a nie dopiero po kolejnym losowaniu.
+  for(const k of Object.keys(CAT_DIRS)){
+    let c = catCounters[k];
+    if(!c || typeof c!=='object'){ catCounters[k] = {n:0, target:newCatThreshold()}; continue; }
+    if(typeof c.n!=='number' || c.n<0) c.n = 0;
+    if(typeof c.target!=='number' || c.target<CAT_MIN || c.target>CAT_MAX) c.target = newCatThreshold();
+  }
+}
+
+// Wykrywanie zdjęć z autoindexu serwera (np. python -m http.server, nginx autoindex).
+async function catsFromIndex(dir){
+  try{
+    const res = await fetch(dir + '/');
+    if(!res.ok) return [];
+    const html = await res.text();
+    const doc  = new DOMParser().parseFromString(html, 'text/html');
+    return [...doc.querySelectorAll('a[href]')]
+      .map(a => a.getAttribute('href') || '')
+      .map(h => { try{ return decodeURIComponent(h.split('?')[0].split('#')[0].split('/').filter(Boolean).pop() || ''); }catch(_){ return ''; } })
+      .filter(n => CAT_EXT.test(n));
+  }catch(e){ return []; }
+}
+
+// Wykrywanie zdjęć na GitHub Pages przez GitHub Contents API (host *.github.io).
+// Dzięki temu wystarczy wrzucić nowe zdjęcie do repo — pojawi się samo, bez zmian w kodzie.
+async function catsFromGitHub(dir){
+  try{
+    const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+    if(!m) return [];
+    const owner = m[1];
+    const segs  = location.pathname.split('/').filter(Boolean);
+    const repo  = segs.length ? segs[0] : (owner + '.github.io');   // project page lub root page
+    const api   = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(dir)}`;
+    const res   = await fetch(api, { headers:{ 'Accept':'application/vnd.github+json' } });
+    if(!res.ok) return [];
+    const arr = await res.json();
+    if(!Array.isArray(arr)) return [];
+    return arr.filter(it => it.type === 'file' && CAT_EXT.test(it.name)).map(it => it.name);
+  }catch(e){ return []; }
+}
+
+// Próbuje wykryć zdjęcia wprost z folderu; gdy się nie uda — zostaje lista zapasowa.
+async function discoverCats(){
+  for(const key of Object.keys(CAT_DIRS)){
+    const dir = CAT_DIRS[key];
+    let names = await catsFromIndex(dir);                  // lokalny serwer z autoindexem
+    if(!names.length) names = await catsFromGitHub(dir);   // GitHub Pages → GitHub API
+    const uniq = [...new Set(names)];
+    if(uniq.length) catFiles[key] = uniq;
+  }
+}
+
+// Losowanie z pominięciem 2 ostatnio pokazanych zdjęć (by to samo nie wyszło pod rząd).
+function pickCat(key){
+  const files = catFiles[key];
+  if(!files || !files.length) return null;
+  const ids = files.map(f => key + '/' + f);
+  let pool = ids.filter(id => !recentCats.includes(id));
+  if(!pool.length) pool = ids.filter(id => id !== recentCats[recentCats.length-1]);
+  if(!pool.length) pool = ids;
+  const chosenId = pool[Math.floor(Math.random()*pool.length)];
+  recentCats.push(chosenId);
+  while(recentCats.length > 2) recentCats.shift();
+  const file = chosenId.slice((key + '/').length);
+  return CAT_DIRS[key] + '/' + encodeURIComponent(file);
+}
+
+function showCat(key){
+  const src = pickCat(key);
+  if(!src) return;
+  let overlay = document.getElementById('cat-overlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='cat-overlay'; document.body.appendChild(overlay); }
+  overlay.innerHTML='';
+  const img = document.createElement('img');
+  img.className='cat-pop';
+  img.alt = key==='good' ? 'Kot — dobra odpowiedź' : 'Kot — zła odpowiedź';
+  img.src = src;
+  img.addEventListener('animationend', ()=> img.remove());
+  overlay.appendChild(img);
+}
+
+// Liczy odpowiedzi danego typu i pokazuje kota po osiągnięciu wylosowanego progu.
+function registerCat(key){
+  const c = catCounters[key]; if(!c) return;
+  c.n++;
+  if(c.n >= c.target){
+    showCat(key);
+    c.n = 0;
+    c.target = newCatThreshold();
+  }
+  saveCatState();
+}
+
 function init(){
   loadMastery();
+  loadCatState();
+  discoverCats();
   const savedMode = localStorage.getItem('socjoQuiz_v2_currentMode');
   if (savedMode) currentMode = savedMode;
   
