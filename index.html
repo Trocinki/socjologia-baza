@@ -1847,16 +1847,20 @@ function checkSeq(q,box,btn){
 function correct(q){
   streak++;
   if(!q.isRetry){
-    // Pierwsze podejście do pytania — liczy się do wyniku, XP i opanowania.
-    score++; answered++; globalXP++;
+    // Pierwsze podejście do pytania — liczy się do wyniku, XP (+3) i opanowania.
+    score++; answered++; globalXP += 3;
     bumpMastery(q.id, +1);
-  } else if(currentMode === 'normal'){
-    if(q.stage === 'relearn'){
-      // Pierwszy sukces po błędzie → zaplanuj POTWIERDZENIE z większym odstępem (spaced success).
-      insertRetry(q, 'confirm', q.lapses || 1);
-    } else if(q.stage === 'confirm'){
-      // Udane potwierdzenie po dłuższym odstępie → karta domknięta w sesji + wzmocnienie trwałe.
-      bumpMastery(q.id, +1);
+  } else {
+    // Poprawna odpowiedź w powtórce — mniejsza nagroda XP (+1).
+    globalXP += 1;
+    if(currentMode === 'normal'){
+      if(q.stage === 'relearn'){
+        // Pierwszy sukces po błędzie → zaplanuj POTWIERDZENIE z większym odstępem (spaced success).
+        insertRetry(q, 'confirm', q.lapses || 1);
+      } else if(q.stage === 'confirm'){
+        // Udane potwierdzenie po dłuższym odstępie → karta domknięta w sesji + wzmocnienie trwałe.
+        bumpMastery(q.id, +1);
+      }
     }
   }
   registerCat('good');
