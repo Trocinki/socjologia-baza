@@ -357,7 +357,7 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
-  <footer class="credit">Maciej Skiba | v1.5.4</footer>
+  <footer class="credit">Maciej Skiba | v1.5.5</footer>
   <div class="whatsnew-wrap">
     <button class="whatsnew-btn" onclick="openWhatsNew()">Co nowego?</button>
   </div>
@@ -370,12 +370,14 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <h3 id="wn-title">Co nowego?</h3>
     <div class="wn-ver">Najnowsze zmiany</div>
     <ul class="wn-list">
+      <li><b>Nowa punktacja XP.</b> Pierwsza dobra odpowiedź to teraz <span class="wn-em">+3 XP</span>, a poprawna odpowiedź w powtórce <span class="wn-em">+1 XP</span>.</li>
+      <li><b>Naprawiony błąd ze złymi odpowiedziami.</b> Zdarzało się, że po zaznaczeniu właściwej opcji strona pokazywała ją jako błędną i podawała inną „poprawną" odpowiedź. Już naprawione — ocenianie zawsze korzysta z aktualnej bazy pytań.</li>
       <li><b>Eksport i import postępu.</b> Jeśli zacząłeś/aś naukę na telefonie i chcesz kontynuować na laptopie z zachowaniem obecnego postępu — kliknij <span class="wn-em">Eksport</span> na jednym urządzeniu, przenieś pobrany plik na drugie, a tam kliknij <span class="wn-em">Import</span> i wybierz ten plik.</li>
+      <li><b>+20 pytań z książki dzięki uprzejmości Mai.</b> Dziękujemy Maju Kośmińska!</li>
       <li><b>Przycisk „Nie znam odpowiedzi".</b> Od razu pokazuje poprawną odpowiedź na zielono, a pytanie zostaje zaliczone jako błędne, żeby wróciło do Ciebie w powtórkach.</li>
       <li><b>Ulepszony system powtórek.</b> Błędne pytania wracają w przemyślanych odstępach i „domykają się" dopiero, gdy odpowiesz dobrze po dłuższej przerwie.</li>
       <li><b>Poziomy.</b> Za poprawne odpowiedzi zdobywasz XP i awansujesz: Obserwator → Adept → …</li>
       <li><b>meow?🐱</b> meow!</li>
-      <li><b>+20 pytań z książki dzięki uprzejmości Mai.</b> Dziękujemy Maja!</li>
     </ul>
   </div>
 </div>
@@ -1688,6 +1690,29 @@ function saveState(){
   }catch(e){}
 }
 
+/* Uzgodnij zapisaną kolejkę z AKTUALNĄ bazą pytań.
+   Zapisana sesja przechowuje treść pytań i poprawne odpowiedzi z chwili zapisu.
+   Gdy dane (np. klucz odpowiedzi) zostały później zmienione, stara kolejka miałaby
+   nieaktualną „correct" → złe ocenianie pierwszego podejścia, mimo że powtórka (brana
+   z BANK) byłaby poprawna. Tu nadpisujemy poprawną odpowiedź i odświeżamy teksty opcji
+   z BANK, zachowując zapisaną KOLEJNOŚĆ opcji (tasowanie) i cały postęp sesji. */
+function reconcileQueueWithBank(){
+  if(!Array.isArray(queue)) return;
+  queue = queue.filter(item => item && BANK.some(b => b.id === item.id)); // usuń pytania spoza bazy
+  queue.forEach(item => {
+    const base = BANK.find(b => b.id === item.id);
+    item.correct = base.correct;                       // poprawna odpowiedź zawsze z aktualnej bazy
+    const sameLetters = Array.isArray(item.options)
+      && item.options.length === base.options.length
+      && item.options.every(o => base.options.some(b => b.letter === o.letter));
+    item.options = sameLetters
+      ? item.options.map(o => ({ letter:o.letter, text: base.options.find(b=>b.letter===o.letter).text }))
+      : base.options.map(o => ({ ...o }));             // zestaw opcji się zmienił → weź z bazy
+  });
+  if(typeof idx !== 'number' || idx < 0) idx = 0;
+  if(idx > queue.length) idx = queue.length;
+}
+
 function loadState(){
   try{
     const gXP = localStorage.getItem('socjoQuiz_v2_globalXP');
@@ -1695,9 +1720,11 @@ function loadState(){
 
     const s = JSON.parse(localStorage.getItem(getSaveKey()));
     if(!s||!s.queue||!s.queue.length) return false;
-    
+
     ({queue,idx,score,streak,answered,wrongMap,shuffleOn,bloom,peak}=s);
-    
+    reconcileQueueWithBank();          // napraw ewentualny rozjazd z aktualną bazą
+    if(!queue.length) return false;    // po uzgodnieniu nic nie zostało → zacznij od nowa
+
     if(currentMode === 'test' && s.activeBankIds){
       activeBank = s.activeBankIds.map(id => BANK.find(q => q.id === id)).filter(Boolean);
     } else {
@@ -1935,7 +1962,8 @@ function finish(){
     $('errs').classList.remove('hidden');
     keys.sort((a,b)=>a-b).forEach(k=>{
       const errData = wrongMap[k];
-      const q = errData.ref;
+      // Bierz pytanie z AKTUALNEJ bazy (zapisany errData.ref mógłby być nieaktualny po edycji danych).
+      const q = BANK.find(b=>b.id===k) || errData.ref;
       const picked = errData.picked;
       
       const qText = `<div class="q">(${q.id}) ${q.text}</div>`;
