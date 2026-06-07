@@ -315,7 +315,7 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <div class="stat" id="xp-stat"><div class="label">Poziom</div><div class="val"><span id="lvl-name">Obserwator</span> <small id="lvl-xp">0/20</small></div></div>
     <div class="stat"><div class="label">Pytanie</div><div class="val"><span id="cur">1</span><small> / <span id="tot">0</span></small></div></div>
     <div class="stat"><div class="label">Wynik</div><div class="val" id="score">0</div></div>
-    <div class="stat" id="streak-stat"><div class="label">Seria</div><div class="val" id="streak">0</div></div>
+    <div class="stat" id="streak-stat"><div class="label">Seria</div><div class="val"><span id="streak">0</span><small> / <span id="streak-max">0</span> rekord</small></div></div>
     <div class="stat" id="mastery-stat"><div class="label">Opanowane</div><div class="val"><span id="mastered-count">0</span><small> / <span id="bank-size">180</span></small></div></div>
   </div>
 
@@ -357,7 +357,7 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
-  <footer class="credit">Maciej Skiba | v1.5.5</footer>
+  <footer class="credit">Maciej Skiba | v1.5.6</footer>
   <div class="whatsnew-wrap">
     <button class="whatsnew-btn" onclick="openWhatsNew()">Co nowego?</button>
   </div>
@@ -1528,8 +1528,10 @@ let wrongMap={};
 let shuffleOn=true;
 let curSeq=[];         
 let isAnswered=false;
-let activeBank=BANK;   
-let globalXP=0;        
+let activeBank=BANK;
+let globalXP=0;
+let maxStreak=0;       // rekord najdłuższej serii (trwały, między sesjami)
+const MAXSTREAK_KEY = 'socjoQuiz_v2_maxStreak';
 
 /* ====== POWTÓRKI W OBRĘBIE SESJI (expanding spaced retrieval) ======
    Po błędzie karta wraca po krótkim (ale nie zerowym) odstępie. Po pierwszym
@@ -1751,6 +1753,7 @@ function updateStats(){
   $('tot').textContent = activeBank.length;
   $('score').textContent = score;
   $('streak').textContent = streak;
+  { const sm=$('streak-max'); if(sm) sm.textContent = maxStreak; }
   $('progress').firstElementChild.style.width = (answered/activeBank.length*100)+'%';
 
   const mc=$('mastered-count'), bs=$('bank-size');
@@ -1873,6 +1876,7 @@ function checkSeq(q,box,btn){
 
 function correct(q){
   streak++;
+  if(streak > maxStreak){ maxStreak = streak; try{ localStorage.setItem(MAXSTREAK_KEY, maxStreak); }catch(e){} }
   if(!q.isRetry){
     // Pierwsze podejście do pytania — liczy się do wyniku, XP (+3) i opanowania.
     score++; answered++; globalXP += 3;
@@ -2315,6 +2319,7 @@ function init(){
   loadMastery();
   loadCatState();
   discoverCats();
+  { const ms = localStorage.getItem(MAXSTREAK_KEY); if(ms !== null) maxStreak = parseInt(ms,10) || 0; }
   const savedMode = localStorage.getItem('socjoQuiz_v2_currentMode');
   if (savedMode) currentMode = savedMode;
   
