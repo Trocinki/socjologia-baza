@@ -302,6 +302,61 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
 .wn-list .wn-em{color:var(--accent);font-weight:600}
 @keyframes wnFade{from{opacity:0}to{opacity:1}}
 @keyframes wnRise{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+
+/* ====== Nagłówek karty: numer + akcje (wstecz / ulubione) ====== */
+.qhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.qhead #qnum{margin-bottom:0}
+.qhead-actions{display:flex;gap:8px;align-items:center;flex:none}
+.qbtn{background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+  padding:5px 11px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.8rem;transition:.2s;line-height:1}
+.qbtn:hover{border-color:var(--accent);color:var(--accent)}
+#fav-btn{font-size:1.05rem;padding:4px 10px}
+#fav-btn.active,#fav-btn.active:hover{color:#f0b46a;border-color:#f0b46a}
+
+/* ====== Stan przeglądania odpowiedzi (po cofnięciu) ====== */
+#options.review .option{cursor:pointer}
+#options.review .option.correct,#options.review .option.wrong{pointer-events:auto}
+.option.dim{opacity:.5}
+.option.dim:hover{opacity:.85}
+.review-hint{margin-top:14px;font-size:.82rem;color:var(--ink-soft);text-align:center;
+  border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+
+/* ====== Modal przeglądania / ulubionych ====== */
+.browse-modal{
+  position:relative;max-width:680px;width:100%;max-height:86vh;display:flex;flex-direction:column;
+  background:hsl(var(--surface-h) var(--surface-s) calc(var(--surface-l) + 2%) / .98);
+  border:1px solid var(--line);border-radius:18px;padding:22px 22px 16px;
+  box-shadow:0 30px 80px -20px hsl(var(--bg-h) 40% 2% / .9);
+  animation:wnRise .25s cubic-bezier(.2,.7,.2,1);
+}
+.browse-modal h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.45rem;margin:0 0 12px;padding-right:44px}
+.browse-tabs{display:flex;gap:8px;margin-bottom:12px}
+.browse-tab{flex:1;background:hsl(var(--surface-h) 16% 16%);border:1px solid var(--line);
+  color:var(--ink-soft);padding:9px 12px;border-radius:10px;cursor:pointer;font-family:inherit;
+  font-size:.9rem;font-weight:600;transition:.2s}
+.browse-tab:hover{color:var(--ink)}
+.browse-tab.active{background:hsl(var(--accent-h) 50% 30%);border-color:transparent;color:#fff}
+.browse-search{width:100%;background:hsl(var(--surface-h) 16% 13%);border:1px solid var(--line);
+  color:var(--ink);padding:10px 14px;border-radius:10px;font-family:inherit;font-size:.95rem;margin-bottom:10px}
+.browse-search:focus{outline:none;border-color:var(--accent)}
+.browse-search::placeholder{color:var(--ink-soft)}
+.browse-count{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);margin-bottom:10px}
+.browse-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px;padding-right:4px}
+.browse-empty{color:var(--ink-soft);text-align:center;padding:34px 12px;font-size:.95rem;line-height:1.6}
+.browse-q{background:hsl(var(--surface-h) 16% 13%);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.browse-q-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.browse-q-id{font-size:.74rem;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+.browse-fav{background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+  width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:1.05rem;line-height:1;transition:.2s;flex:none}
+.browse-fav:hover{border-color:#f0b46a;color:#f0b46a}
+.browse-fav.active{color:#f0b46a;border-color:#f0b46a}
+.browse-q-text{font-family:"Fraunces",serif;font-size:1.06rem;font-weight:500;line-height:1.35;margin-bottom:10px}
+.browse-opts{display:flex;flex-direction:column;gap:6px}
+.browse-opt{font-size:.92rem;color:var(--ink-soft);padding:7px 11px;border-radius:8px;
+  background:hsl(var(--surface-h) 16% 16%);border:1px solid transparent;line-height:1.4}
+.browse-opt b{color:var(--ink)}
+.browse-opt.correct{background:var(--ok-bg);border-color:var(--ok-bd);color:#d6f5e6}
+.browse-opt.correct b{color:#d6f5e6}
 </style>
 </head>
 <body>
@@ -325,6 +380,13 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
       <span class="track"></span>
       <span class="label-txt">Tasowanie</span>
     </label>
+    <label class="switch" id="sound-switch">
+      <input type="checkbox" id="sound-toggle" checked>
+      <span class="track"></span>
+      <span class="label-txt">Dźwięk</span>
+    </label>
+    <button class="btn-io" id="browse-open-btn" onclick="openBrowse('all')" title="Przeglądaj wszystkie pytania bez odpowiadania">📖 Przeglądaj</button>
+    <button class="btn-io" id="fav-open-btn" onclick="openBrowse('fav')" title="Twoje ulubione pytania">★ Ulubione (0)</button>
     <button class="btn-mode" id="btn-mode" onclick="toggleMode()">Przejdź do Testu (40 pytań)</button>
     <button class="btn-io" onclick="exportProgress()" title="Zapisz postęp do pliku">⭳ Eksport</button>
     <button class="btn-io" onclick="document.getElementById('import-file').click()" title="Wczytaj postęp z pliku">⭱ Import</button>
@@ -336,12 +398,18 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
 
   <div class="card" id="quiz">
     <div id="retry-badge" class="hidden">⟳ Powtórka — wcześniej błędna</div>
-    <div id="qnum">Pytanie 1</div>
+    <div class="qhead">
+      <div id="qnum">Pytanie 1</div>
+      <div class="qhead-actions">
+        <button id="back" class="qbtn hidden" type="button" title="Wróć do poprzedniego pytania">← Wstecz</button>
+        <button id="fav-btn" class="qbtn" type="button" title="Dodaj do ulubionych">☆</button>
+      </div>
+    </div>
     <h2 id="question" style="font-family:'Fraunces',serif;font-weight:500;font-size:1.42rem;line-height:1.35;margin:0 0 22px">Ładowanie…</h2>
     <div id="options"></div>
     <button id="dontknow" class="ghost hidden" onclick="giveUp()">Nie znam odpowiedzi</button>
     <button id="next" class="primary hidden">Następne pytanie <span class="kbd">Enter</span></button>
-    <div class="hints">Klawisze: wybór <span class="kbd">A</span>–<span class="kbd">F</span> · zatwierdź / dalej <span class="kbd">Enter</span></div>
+    <div class="hints">Klawisze: wybór <span class="kbd">A</span>–<span class="kbd">F</span> · zatwierdź / dalej <span class="kbd">Enter</span> · wstecz <span class="kbd">←</span></div>
   </div>
 
   <div class="card hidden" id="summary">
@@ -357,7 +425,7 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <button class="primary" onclick="restart()">Rozwiąż ponownie ten sam zestaw</button>
   </div>
 
-  <footer class="credit">Maciej Skiba | v1.5.6</footer>
+  <footer class="credit">Maciej Skiba | v1.6.0</footer>
   <div class="whatsnew-wrap">
     <button class="whatsnew-btn" onclick="openWhatsNew()">Co nowego?</button>
   </div>
@@ -370,6 +438,10 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
     <h3 id="wn-title">Co nowego?</h3>
     <div class="wn-ver">Najnowsze zmiany</div>
     <ul class="wn-list">
+      <li><b>Cofanie do poprzedniego pytania.</b> Przycisk <span class="wn-em">← Wstecz</span> (lub klawisz <span class="wn-em">←</span>) pokazuje rozwiązane pytanie. Jeśli przez przypadek kliknęłaś/eś złą opcję, możesz zaznaczyć inną — po potwierdzeniu wynik zostanie poprawiony.</li>
+      <li><b>Ulubione pytania.</b> Kliknij gwiazdkę <span class="wn-em">☆</span> przy pytaniu, aby dodać je do ulubionych, a przyciskiem <span class="wn-em">★ Ulubione</span> przejrzyj je w dowolnej chwili.</li>
+      <li><b>Przeglądanie pytań.</b> Przycisk <span class="wn-em">📖 Przeglądaj</span> pokazuje wszystkie pytania razem z poprawnymi odpowiedziami — bez odpowiadania i bez wpływu na wynik. Jest też wyszukiwarka.</li>
+      <li><b>Dźwięki.</b> Krótki, przyjemny dźwięk przy dobrej odpowiedzi i delikatny przy błędnej. Możesz je wyciszyć przełącznikiem <span class="wn-em">Dźwięk</span>.</li>
       <li><b>Nowa punktacja XP.</b> Pierwsza dobra odpowiedź to teraz <span class="wn-em">+3 XP</span>, a poprawna odpowiedź w powtórce <span class="wn-em">+1 XP</span>.</li>
       <li><b>Naprawiony błąd ze złymi odpowiedziami.</b> Zdarzało się, że po zaznaczeniu właściwej opcji strona pokazywała ją jako błędną i podawała inną „poprawną" odpowiedź. Już naprawione — ocenianie zawsze korzysta z aktualnej bazy pytań.</li>
       <li><b>Eksport i import postępu.</b> Jeśli zacząłeś/aś naukę na telefonie i chcesz kontynuować na laptopie z zachowaniem obecnego postępu — kliknij <span class="wn-em">Eksport</span> na jednym urządzeniu, przenieś pobrany plik na drugie, a tam kliknij <span class="wn-em">Import</span> i wybierz ten plik.</li>
@@ -379,6 +451,20 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
       <li><b>Poziomy.</b> Za poprawne odpowiedzi zdobywasz XP i awansujesz: Obserwator → Adept → …</li>
       <li><b>meow?🐱</b> meow!</li>
     </ul>
+  </div>
+</div>
+
+<div id="browse-overlay" class="wn-overlay hidden" onclick="if(event.target===this) closeBrowse()">
+  <div class="browse-modal" role="dialog" aria-modal="true" aria-labelledby="browse-title">
+    <button class="wn-close" onclick="closeBrowse()" aria-label="Zamknij">×</button>
+    <h3 id="browse-title">Przeglądaj pytania</h3>
+    <div class="browse-tabs">
+      <button id="tab-all" class="browse-tab active" type="button" onclick="setBrowseTab('all')">Wszystkie</button>
+      <button id="tab-fav" class="browse-tab" type="button" onclick="setBrowseTab('fav')">★ Ulubione (0)</button>
+    </div>
+    <input id="browse-search" class="browse-search" type="search" placeholder="Szukaj w treści pytań i odpowiedzi…" oninput="renderBrowseList()">
+    <div id="browse-count" class="browse-count"></div>
+    <div id="browse-list" class="browse-list"></div>
   </div>
 </div>
 
@@ -1533,6 +1619,26 @@ let globalXP=0;
 let maxStreak=0;       // rekord najdłuższej serii (trwały, między sesjami)
 const MAXSTREAK_KEY = 'socjoQuiz_v2_maxStreak';
 
+/* ====== Cofanie odpowiedzi / podgląd rozwiązanych pytań ======
+   answers[pozycja] = { picked, ok, seq } — zapamiętane odpowiedzi (do podglądu po cofnięciu).
+   history[pozycja] = snapshot — pełny stan SPRZED odpowiedzi, by móc poprawnie cofnąć
+   skutki (wynik, XP, opanowanie, powtórki) przy zmianie odpowiedzi. history jest tylko
+   w pamięci (nie w localStorage) — zmiana odpowiedzi działa w obrębie bieżącej sesji. */
+let answers={};
+let history={};
+const CHANGE_MSG = "Czy jesteś pewien, że chcesz zmienić odpowiedź?\n\nKorzystaj z tej funkcji tylko wtedy, gdy przez przypadek zaznaczyłeś/aś złą odpowiedź.";
+const NO_HISTORY_MSG = "Zmianę odpowiedzi można cofnąć tylko w trakcie tej samej sesji — zanim odświeżysz lub zamkniesz stronę.";
+
+/* ====== Ulubione ====== */
+const FAV_KEY = 'socjoQuiz_v2_favorites';
+let favorites = new Set();
+let browseTab = 'all';
+
+/* ====== Dźwięk ====== */
+const SOUND_KEY = 'socjoQuiz_v2_sound';
+let soundOn = true;
+let audioCtx = null;
+
 /* ====== POWTÓRKI W OBRĘBIE SESJI (expanding spaced retrieval) ======
    Po błędzie karta wraca po krótkim (ale nie zerowym) odstępie. Po pierwszym
    udanym przypomnieniu planowane jest POTWIERDZENIE z większym odstępem.
@@ -1685,7 +1791,7 @@ function saveState(){
   try{
     const activeBankIds = activeBank.map(q => q.id);
     localStorage.setItem(getSaveKey(), JSON.stringify({
-      queue, idx, score, streak, answered, wrongMap, shuffleOn, bloom, peak, activeBankIds
+      queue, idx, score, streak, answered, wrongMap, shuffleOn, bloom, peak, activeBankIds, answers
     }));
     localStorage.setItem('socjoQuiz_v2_globalXP', globalXP);
     localStorage.setItem('socjoQuiz_v2_currentMode', currentMode);
@@ -1724,8 +1830,12 @@ function loadState(){
     if(!s||!s.queue||!s.queue.length) return false;
 
     ({queue,idx,score,streak,answered,wrongMap,shuffleOn,bloom,peak}=s);
+    answers = (s.answers && typeof s.answers === 'object') ? s.answers : {};
+    history = {};                      // snapshoty żyją tylko w pamięci jednej sesji
+    const lenBefore = queue.length;
     reconcileQueueWithBank();          // napraw ewentualny rozjazd z aktualną bazą
     if(!queue.length) return false;    // po uzgodnieniu nic nie zostało → zacznij od nowa
+    if(queue.length !== lenBefore) answers = {}; // pozycje się przesunęły → podgląd nieaktualny
 
     if(currentMode === 'test' && s.activeBankIds){
       activeBank = s.activeBankIds.map(id => BANK.find(q => q.id === id)).filter(Boolean);
@@ -1790,19 +1900,55 @@ function showQuestion(){
   isAnswered=false;
   if(idx>=queue.length){ return finish(); }
   const q=queue[idx];
-  
+
   $('retry-badge').classList.toggle('hidden', !q.isRetry);
   if(q.isRetry){
     $('retry-badge').textContent = (q.stage === 'confirm')
       ? '✓ Potwierdzenie — wcześniej błędne'
       : '⟳ Powtórka — wcześniej błędne';
   }
-  $('qnum').textContent='Pytanie '+(currentMode === 'test' ? (answered+1) : q.id);
+  $('qnum').textContent='Pytanie '+(currentMode === 'test' ? (idx+1) : q.id);
   $('question').textContent=q.text;
-  $('next').classList.add('hidden');
-  $('dontknow').classList.remove('hidden');
+  updateBackBtn();
+  updateFavBtn();
 
   const box=$('options'); box.innerHTML='';
+  const ans = answers[idx];
+
+  if(ans){
+    // ===== Stan przeglądania: pytanie jest już rozwiązane (po cofnięciu) =====
+    isAnswered=true;
+    box.classList.add('review');
+    $('dontknow').classList.add('hidden');
+
+    if(q.correct.includes(',')){
+      renderSeqReview(q, box);
+    } else {
+      q.options.forEach(opt=>{
+        const div=document.createElement('div');
+        div.className='option'; div.dataset.letter=opt.letter;
+        if(opt.letter===q.correct) div.classList.add('correct');
+        else if(opt.letter===ans.picked) div.classList.add('wrong');
+        else div.classList.add('dim');
+        div.innerHTML='<span class="key">'+opt.letter.toUpperCase()+'</span><span>'+opt.text+'</span>';
+        div.title='Kliknij, aby zmienić odpowiedź';
+        div.onclick=()=> attemptChangeAnswer(opt.letter);
+        box.appendChild(div);
+      });
+      const hint=document.createElement('div');
+      hint.className='review-hint';
+      hint.textContent='To pytanie masz już rozwiązane. Kliknij inną opcję, aby zmienić odpowiedź.';
+      box.appendChild(hint);
+    }
+    $('next').classList.remove('hidden');
+    updateStats();
+    return;
+  }
+
+  // ===== Stan świeży: pytanie bez odpowiedzi =====
+  box.classList.remove('review');
+  $('next').classList.add('hidden');
+  $('dontknow').classList.remove('hidden');
 
   if(q.correct.includes(',')){ renderSeq(q,box); return; }
 
@@ -1818,15 +1964,89 @@ function showQuestion(){
 
 function selectOption(el, letter, q){
   isAnswered=true;
-  $('dontknow').classList.add('hidden');
-  document.querySelectorAll('.option').forEach(o=>{
-    o.classList.add('disabled');
-    if(o.dataset.letter===q.correct) o.classList.add('correct');
-    if(o===el && letter!==q.correct) o.classList.add('wrong');
-  });
+  history[idx]=snapshotState();                 // stan SPRZED zastosowania skutków odpowiedzi
   if(letter===q.correct){ correct(q); } else { mistake(q, letter); }
-  $('next').classList.remove('hidden');
-  updateStats(); saveState();
+  answers[idx]={picked:letter, ok:(letter===q.correct)};
+  saveState();
+  showQuestion();                               // przerysuj jako stan przeglądania (z możliwością zmiany)
+}
+
+/* Render rozwiązanego pytania sekwencyjnego (po cofnięciu). */
+function renderSeqReview(q, box){
+  const ans=answers[idx];
+  const order=q.correct.split(',');
+  const correctText=order.map(l=>{const o=q.options.find(x=>x.letter===l);return o?o.text:l;}).join(' → ');
+  const gaveUp = ans.picked==='(nie znam odpowiedzi)';
+  const fb=document.createElement('div'); fb.className='feedback '+(ans.ok?'ok':'no');
+  if(ans.ok){
+    fb.innerHTML='Prawidłowa kolejność: <b>'+correctText+'</b>';
+  } else if(gaveUp){
+    fb.innerHTML='Nie udzielono odpowiedzi. Poprawna kolejność: <b>'+correctText+'</b>';
+  } else {
+    const userText=(ans.picked||'').split(',').map(l=>{const o=q.options.find(x=>x.letter===l);return o?o.text:l;}).join(' → ');
+    fb.innerHTML='Twoja kolejność: <b>'+userText+'</b><br>Poprawna: <b>'+correctText+'</b>';
+  }
+  box.appendChild(fb);
+  const chg=document.createElement('button');
+  chg.type='button'; chg.className='ghost'; chg.style.marginTop='12px';
+  chg.textContent='↻ Zmień odpowiedź';
+  chg.onclick=attemptChangeSeq;
+  box.appendChild(chg);
+}
+
+/* ====== Cofanie i zmiana odpowiedzi ====== */
+function snapshotState(){
+  return {
+    queue: JSON.parse(JSON.stringify(queue)),
+    idx, score, streak, answered,
+    wrongMap: JSON.parse(JSON.stringify(wrongMap)),
+    bloom, peak, globalXP, maxStreak,
+    mastery: JSON.parse(JSON.stringify(mastery)),
+    catCounters: JSON.parse(JSON.stringify(catCounters)),
+    recentCats: recentCats.slice()
+  };
+}
+function restoreState(s){
+  queue = JSON.parse(JSON.stringify(s.queue));
+  idx=s.idx; score=s.score; streak=s.streak; answered=s.answered;
+  wrongMap = JSON.parse(JSON.stringify(s.wrongMap));
+  bloom=s.bloom; peak=s.peak; globalXP=s.globalXP; maxStreak=s.maxStreak;
+  mastery = JSON.parse(JSON.stringify(s.mastery));
+  catCounters = JSON.parse(JSON.stringify(s.catCounters));
+  recentCats = s.recentCats.slice();
+  // Te wartości są też trzymane osobno w localStorage — uzgodnij je po cofnięciu.
+  saveMastery(); saveCatState();
+  try{ localStorage.setItem('socjoQuiz_v2_globalXP', globalXP); localStorage.setItem(MAXSTREAK_KEY, maxStreak); }catch(e){}
+}
+/* Przywróć stan sprzed odpowiedzi na pozycji i; usuń podgląd/snapshoty dla pozycji >= i. */
+function rewindTo(i){
+  i=+i;
+  const s=history[i];
+  if(!s) return false;
+  restoreState(s);                              // ustawia także idx = i
+  Object.keys(answers).forEach(k=>{ if(+k>=i) delete answers[k]; });
+  Object.keys(history).forEach(k=>{ if(+k>=i) delete history[k]; });
+  isAnswered=false; curSeq=[];
+  applyBloom();
+  return true;
+}
+function attemptChangeAnswer(letter){
+  if(!history[idx]){ alert(NO_HISTORY_MSG); return; }
+  if(!confirm(CHANGE_MSG)) return;
+  if(!rewindTo(idx)) return;
+  showQuestion();                               // przerysuj jako pytanie do rozwiązania
+  const q=queue[idx]; if(!q) return;
+  const div=[...$('options').querySelectorAll('.option')].find(o=>o.dataset.letter===letter);
+  if(div) selectOption(div, letter, q);
+}
+function attemptChangeSeq(){
+  if(!history[idx]){ alert(NO_HISTORY_MSG); return; }
+  if(!confirm(CHANGE_MSG)) return;
+  if(!rewindTo(idx)) return;
+  showQuestion();                               // przerysuj jako interaktywną układankę
+}
+function updateBackBtn(){
+  const b=$('back'); if(b) b.classList.toggle('hidden', idx<=0);
 }
 
 function renderSeq(q,box){
@@ -1859,19 +2079,15 @@ function drawSeq(q,box){
   box.insertBefore(frag, btn||null);
 }
 function checkSeq(q,box,btn){
-  if(isAnswered) return; isAnswered=true; btn.remove();
-  $('dontknow').classList.add('hidden');
+  if(isAnswered) return; isAnswered=true;
+  history[idx]=snapshotState();
   const userOrder=curSeq.map(o=>o.letter).join(',');
   const ok=userOrder===q.correct;
-  box.querySelectorAll('.seq .ctrl button').forEach(b=>b.disabled=true);
-  box.querySelectorAll('.seq').forEach(s=>s.classList.add(ok?'ok-seq':'no-seq'));
-  const fb=document.createElement('div'); fb.className='feedback '+(ok?'ok':'no');
-  if(ok){ correct(q); fb.textContent='Świetnie — prawidłowa kolejność.'; }
-  else{ mistake(q, userOrder); fb.innerHTML='Niepoprawnie. Twoja kolejność: <b>'+userOrder+'</b><br>Poprawna: <b>'+q.correct+'</b>'; }
-  box.appendChild(fb);
+  if(ok){ correct(q); } else { mistake(q, userOrder); }
+  answers[idx]={picked:userOrder, ok, seq:true};
   curSeq=[];
-  $('next').classList.remove('hidden');
-  updateStats(); saveState();
+  saveState();
+  showQuestion();                               // przerysuj jako stan przeglądania
 }
 
 function correct(q){
@@ -1896,10 +2112,12 @@ function correct(q){
   }
   registerCat('good');
   bloomCorrect();
+  playCorrectSound();
 }
 
 function mistake(q, userAnswerStr){
   streak=0;
+  playWrongSound();
   const lapses = (q.lapses || 0) + 1;
   if(!q.isRetry){
     answered++;
@@ -1922,36 +2140,18 @@ function mistake(q, userAnswerStr){
 function giveUp(){
   if(isAnswered) return;
   const q=queue[idx]; if(!q) return;
-  $('dontknow').classList.add('hidden');
   isAnswered=true;
-  const box=$('options');
-
-  if(q.correct.includes(',')){
-    // Pytanie sekwencyjne — ustaw i pokaż poprawną kolejność na zielono.
-    const checkBtn=box.querySelector('#checkseq'); if(checkBtn) checkBtn.remove();
-    const order=q.correct.split(',');
-    curSeq.sort((a,b)=>order.indexOf(a.letter)-order.indexOf(b.letter));
-    drawSeq(q,box);
-    box.querySelectorAll('.seq .ctrl button').forEach(b=>b.disabled=true);
-    box.querySelectorAll('.seq').forEach(s=>s.classList.add('ok-seq'));
-    const fb=document.createElement('div'); fb.className='feedback no';
-    const correctText=order.map(l=>{const o=q.options.find(x=>x.letter===l);return o?o.text:l;}).join(' → ');
-    fb.innerHTML='Pytanie zaliczone jako błędne. Poprawna kolejność: <b>'+correctText+'</b>';
-    box.appendChild(fb);
-    curSeq=[];
-  } else {
-    // Pytanie jednokrotnego wyboru — podświetl poprawną opcję na zielono.
-    document.querySelectorAll('.option').forEach(o=>{
-      o.classList.add('disabled');
-      if(o.dataset.letter===q.correct) o.classList.add('correct');
-    });
-  }
+  history[idx]=snapshotState();
+  curSeq=[];
   mistake(q, '(nie znam odpowiedzi)');
-  $('next').classList.remove('hidden');
-  updateStats(); saveState();
+  answers[idx]={picked:'(nie znam odpowiedzi)', ok:false, seq:q.correct.includes(',')};
+  saveState();
+  showQuestion();                               // pokaż poprawną odpowiedź w stanie przeglądania
 }
 
-$('next').onclick=()=>{ idx++; if(idx>=queue.length) finish(); else showQuestion(); };
+$('next').onclick=()=>{ idx++; if(idx>=queue.length) finish(); else { showQuestion(); saveState(); } };
+$('back').onclick=()=>{ if(idx>0){ idx--; curSeq=[]; showQuestion(); saveState(); } };
+$('fav-btn').onclick=()=>{ const q=queue[idx]; if(q) toggleFavorite(q.id); };
 
 function finish(){
   $('quiz').classList.add('hidden');
@@ -2055,7 +2255,7 @@ function toggleMode() {
 
 function startFresh(keepBloom){
   buildQueue();
-  idx=0; score=0; streak=0; answered=0; wrongMap={}; curSeq=[];
+  idx=0; score=0; streak=0; answered=0; wrongMap={}; curSeq=[]; answers={}; history={};
   if(!keepBloom){ bloom=0; peak=0; }
   applyBloom();
   $('summary').classList.add('hidden');
@@ -2315,9 +2515,160 @@ function celebrateCompletion(){
   setTimeout(() => layer.remove(), (maxEnd + 0.5) * 1000);
 }
 
+/* ============================================================
+   ULUBIONE PYTANIA
+   ============================================================ */
+function loadFavorites(){
+  try{ const a=JSON.parse(localStorage.getItem(FAV_KEY)); if(Array.isArray(a)) favorites=new Set(a.map(String)); }catch(e){}
+}
+function saveFavorites(){
+  try{ localStorage.setItem(FAV_KEY, JSON.stringify([...favorites])); }catch(e){}
+}
+function isFav(id){ return favorites.has(String(id)); }
+function toggleFavorite(id){
+  id=String(id);
+  if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
+  saveFavorites();
+  updateFavBtn(); updateFavCount();
+  if(!$('browse-overlay').classList.contains('hidden')) renderBrowseList();
+}
+function updateFavBtn(){
+  const b=$('fav-btn'); if(!b) return;
+  const q=queue[idx];
+  if(!q){ b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  const on=isFav(q.id);
+  b.textContent = on ? '★' : '☆';
+  b.classList.toggle('active', on);
+  b.title = on ? 'Usuń z ulubionych' : 'Dodaj do ulubionych';
+}
+function updateFavCount(){
+  const n=favorites.size;
+  const ob=$('fav-open-btn'); if(ob) ob.textContent='★ Ulubione ('+n+')';
+  const tab=$('tab-fav'); if(tab) tab.textContent='★ Ulubione ('+n+')';
+}
+
+/* ============================================================
+   DŹWIĘKI ODPOWIEDZI (Web Audio — bez plików zewnętrznych)
+   ============================================================ */
+function ensureAudio(){
+  if(audioCtx) return audioCtx;
+  try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx=null; }
+  return audioCtx;
+}
+function playCorrectSound(){
+  if(!soundOn) return;
+  const ctx=ensureAudio(); if(!ctx) return;
+  if(ctx.state==='suspended') ctx.resume();
+  const t0=ctx.currentTime;
+  // Krótki, wesoły dwudźwięk w górę.
+  [[659.25, 0], [987.77, 0.10]].forEach(([f,dt])=>{
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001, t0+dt);
+    g.gain.linearRampToValueAtTime(0.18, t0+dt+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dt+0.20);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0+dt); o.stop(t0+dt+0.22);
+  });
+}
+function playWrongSound(){
+  if(!soundOn) return;
+  const ctx=ensureAudio(); if(!ctx) return;
+  if(ctx.state==='suspended') ctx.resume();
+  const t0=ctx.currentTime;
+  // Delikatny, neutralny ton w dół (nie ostry).
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type='sine';
+  o.frequency.setValueAtTime(320, t0);
+  o.frequency.exponentialRampToValueAtTime(160, t0+0.20);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(0.15, t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+0.30);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t0); o.stop(t0+0.32);
+}
+$('sound-toggle').addEventListener('change', e=>{
+  soundOn = e.target.checked;
+  $('sound-switch').classList.toggle('on', soundOn);
+  try{ localStorage.setItem(SOUND_KEY, soundOn ? '1' : '0'); }catch(e){}
+  if(soundOn) playCorrectSound();              // krótki podgląd po włączeniu
+});
+
+/* ============================================================
+   PRZEGLĄDANIE PYTAŃ / ULUBIONE (modal)
+   ============================================================ */
+function openBrowse(tab){
+  browseTab = tab || 'all';
+  updateBrowseTabs();
+  $('browse-search').value='';
+  renderBrowseList();
+  $('browse-overlay').classList.remove('hidden');
+}
+function closeBrowse(){ $('browse-overlay').classList.add('hidden'); }
+function setBrowseTab(t){ browseTab=t; updateBrowseTabs(); renderBrowseList(); }
+function updateBrowseTabs(){
+  $('tab-all').classList.toggle('active', browseTab==='all');
+  $('tab-fav').classList.toggle('active', browseTab==='fav');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function pluralPytan(n){
+  if(n===1) return 'pytanie';
+  const d=n%10, dd=n%100;
+  if(d>=2 && d<=4 && !(dd>=12 && dd<=14)) return 'pytania';
+  return 'pytań';
+}
+function renderBrowseList(){
+  const term=($('browse-search').value||'').trim().toLowerCase();
+  let items = BANK.slice().sort((a,b)=> (+a.id)-(+b.id));
+  if(browseTab==='fav') items = items.filter(q=> isFav(q.id));
+  if(term) items = items.filter(q=>
+    ('('+q.id+') '+q.text+' '+q.options.map(o=>o.text).join(' ')).toLowerCase().includes(term));
+
+  const cnt=$('browse-count'), list=$('browse-list');
+  if(browseTab==='fav' && !favorites.size){
+    cnt.textContent='';
+    list.innerHTML='<div class="browse-empty">Nie masz jeszcze ulubionych pytań.<br>Dodawaj je gwiazdką ☆ podczas nauki lub w zakładce „Wszystkie".</div>';
+    return;
+  }
+  if(!items.length){
+    cnt.textContent='';
+    list.innerHTML='<div class="browse-empty">Brak pytań pasujących do wyszukiwania.</div>';
+    return;
+  }
+  cnt.textContent = items.length+' '+pluralPytan(items.length);
+
+  list.innerHTML = items.map(q=>{
+    const fav=isFav(q.id);
+    let optsHtml;
+    if(q.correct.includes(',')){
+      const order=q.correct.split(',');
+      const txt=order.map(l=>{const o=q.options.find(x=>x.letter===l);return o?escapeHtml(o.text):l;}).join(' → ');
+      optsHtml='<div class="browse-opt correct"><b>Poprawna kolejność:</b> '+txt+'</div>'
+        + q.options.map(o=>'<div class="browse-opt"><b>'+o.letter+')</b> '+escapeHtml(o.text)+'</div>').join('');
+    } else {
+      optsHtml=q.options.map(o=>{
+        const ok=o.letter===q.correct;
+        return '<div class="browse-opt'+(ok?' correct':'')+'"><b>'+o.letter+')</b> '+escapeHtml(o.text)+(ok?' ✓':'')+'</div>';
+      }).join('');
+    }
+    return '<div class="browse-q">'
+      + '<div class="browse-q-head"><span class="browse-q-id">Pytanie '+q.id+'</span>'
+      + '<button class="browse-fav'+(fav?' active':'')+'" type="button" onclick="toggleFavorite(\''+q.id+'\')" '
+      + 'title="'+(fav?'Usuń z ulubionych':'Dodaj do ulubionych')+'" aria-label="Ulubione">'+(fav?'★':'☆')+'</button></div>'
+      + '<div class="browse-q-text">'+escapeHtml(q.text)+'</div>'
+      + '<div class="browse-opts">'+optsHtml+'</div></div>';
+  }).join('');
+}
+
 function init(){
   loadMastery();
   loadCatState();
+  loadFavorites();
+  { const sp=localStorage.getItem(SOUND_KEY); if(sp!==null) soundOn = sp!=='0'; }
+  $('sound-toggle').checked = soundOn;
+  $('sound-switch').classList.toggle('on', soundOn);
+  updateFavCount();
   discoverCats();
   { const ms = localStorage.getItem(MAXSTREAK_KEY); if(ms !== null) maxStreak = parseInt(ms,10) || 0; }
   const savedMode = localStorage.getItem('socjoQuiz_v2_currentMode');
@@ -2344,12 +2695,18 @@ function init(){
 /* ====== Okienko „Co nowego?" ====== */
 function openWhatsNew(){ $('whatsnew-overlay').classList.remove('hidden'); }
 function closeWhatsNew(){ $('whatsnew-overlay').classList.add('hidden'); }
+function anyModalOpen(){
+  return !$('whatsnew-overlay').classList.contains('hidden')
+      || !$('browse-overlay').classList.contains('hidden');
+}
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape' && !$('whatsnew-overlay').classList.contains('hidden')) closeWhatsNew();
+  if(e.key!=='Escape') return;
+  if(!$('browse-overlay').classList.contains('hidden')) closeBrowse();
+  else if(!$('whatsnew-overlay').classList.contains('hidden')) closeWhatsNew();
 });
 
 document.addEventListener('keydown', e=>{
-  if(!$('whatsnew-overlay').classList.contains('hidden')) return; // okienko otwarte → nie łap skrótów quizu
+  if(anyModalOpen()) return;                    // modal otwarty → nie łap skrótów quizu
   if($('quiz').classList.contains('hidden')) return;
   const q=queue[idx]; if(!q) return;
   if(e.key==='Enter'){
@@ -2357,6 +2714,7 @@ document.addEventListener('keydown', e=>{
     else if(q.correct.includes(',') && !isAnswered){ const b=$('checkseq'); if(b) b.click(); }
     return;
   }
+  if(e.key==='ArrowLeft'){ if(idx>0) $('back').click(); return; }
   if(!isAnswered && !q.correct.includes(',')){
     const k=e.key.toLowerCase();
     if('abcdef'.includes(k)){
