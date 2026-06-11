@@ -112,7 +112,7 @@ header.top{
 .btn-mode{
   background:transparent;border:1px solid var(--accent);color:var(--accent);
   padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.85rem;font-family:inherit;
-  transition:.2s; font-weight: 600; margin-left: auto;
+  transition:.2s; font-weight: 600;
 }
 .btn-mode:hover{background:var(--accent);color:#fff;}
 
@@ -357,6 +357,40 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
 .browse-opt b{color:var(--ink)}
 .browse-opt.correct{background:var(--ok-bg);border-color:var(--ok-bd);color:#d6f5e6}
 .browse-opt.correct b{color:#d6f5e6}
+
+/* ====== Kompaktowy pasek narzędzi + menu „⚙" ====== */
+.tool-cluster{display:inline-flex;align-items:center;gap:8px;margin-left:auto}
+.tool-icon{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  height:40px;min-width:40px;padding:0 11px;
+  background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+  border-radius:11px;cursor:pointer;font-family:inherit;font-size:1.05rem;line-height:1;transition:.2s;
+}
+.tool-icon:hover{border-color:var(--accent);color:var(--accent)}
+.tool-badge{font-size:.7rem;font-weight:700;background:var(--accent);color:#fff;
+  border-radius:999px;padding:1px 6px;min-width:17px;text-align:center;line-height:1.5}
+.menu-wrap{position:relative;display:inline-flex}
+.menu-pop{
+  position:absolute;right:0;top:calc(100% + 8px);z-index:60;width:min(280px,86vw);
+  background:hsl(var(--surface-h) var(--surface-s) calc(var(--surface-l) + 3%) / .99);
+  border:1px solid var(--line);border-radius:14px;padding:8px;
+  box-shadow:0 24px 60px -18px hsl(var(--bg-h) 40% 2% / .95);
+  animation:wnRise .18s cubic-bezier(.2,.7,.2,1);
+  display:flex;flex-direction:column;
+}
+.menu-section{font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);padding:9px 12px 4px}
+.menu-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:transparent;border:none;color:var(--ink);
+  padding:11px 12px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:.92rem;transition:.15s}
+.menu-item .mi-ic{width:18px;text-align:center;flex:none;color:var(--ink-soft)}
+.menu-item:hover{background:hsl(var(--surface-h) 16% 20%)}
+.menu-item.danger:hover{background:var(--no-bg);color:var(--no)}
+.menu-item.danger:hover .mi-ic{color:var(--no)}
+.menu-divider{height:1px;background:var(--line);margin:6px 6px}
+.menu-pop .switch{display:flex;align-items:center;width:100%;gap:10px;
+  padding:11px 12px;border-radius:9px;color:var(--ink);font-size:.92rem}
+.menu-pop .switch:hover{background:hsl(var(--surface-h) 16% 20%)}
+.menu-pop .switch .label-txt{order:-1;margin-right:auto;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -375,22 +409,32 @@ button.ghost:hover{border-color:var(--no-bd);color:var(--no);background:var(--no
   </div>
 
   <div class="toolbar">
-    <label class="switch" id="shuffle-switch">
-      <input type="checkbox" id="shuffle-toggle">
-      <span class="track"></span>
-      <span class="label-txt">Tasowanie</span>
-    </label>
-    <label class="switch" id="sound-switch">
-      <input type="checkbox" id="sound-toggle" checked>
-      <span class="track"></span>
-      <span class="label-txt">Dźwięk</span>
-    </label>
-    <button class="btn-io" id="browse-open-btn" onclick="openBrowse('all')" title="Przeglądaj wszystkie pytania bez odpowiadania">📖 Przeglądaj</button>
-    <button class="btn-io" id="fav-open-btn" onclick="openBrowse('fav')" title="Twoje ulubione pytania">★ Ulubione (0)</button>
-    <button class="btn-mode" id="btn-mode" onclick="toggleMode()">Przejdź do Testu (40 pytań)</button>
-    <button class="btn-io" onclick="exportProgress()" title="Zapisz postęp do pliku">⭳ Eksport</button>
-    <button class="btn-io" onclick="document.getElementById('import-file').click()" title="Wczytaj postęp z pliku">⭱ Import</button>
-    <button class="btn-reset" onclick="resetSession()">Reset sesji</button>
+    <button class="btn-mode" id="btn-mode" onclick="toggleMode()">🎓 Tryb testu</button>
+    <div class="tool-cluster">
+      <button class="tool-icon" id="browse-open-btn" onclick="openBrowse('all')" title="Przeglądaj wszystkie pytania (bez odpowiadania)" aria-label="Przeglądaj pytania">📖</button>
+      <button class="tool-icon" id="fav-open-btn" onclick="openBrowse('fav')" title="Twoje ulubione pytania" aria-label="Ulubione pytania">★<span id="fav-count" class="tool-badge hidden">0</span></button>
+      <div class="menu-wrap">
+        <button class="tool-icon" id="menu-btn" onclick="toggleMenu()" title="Menu i ustawienia" aria-haspopup="true" aria-expanded="false" aria-label="Menu">⚙</button>
+        <div class="menu-pop hidden" id="menu-pop" role="menu">
+          <div class="menu-section">Ustawienia</div>
+          <label class="switch" id="shuffle-switch">
+            <input type="checkbox" id="shuffle-toggle">
+            <span class="track"></span>
+            <span class="label-txt">Tasowanie pytań</span>
+          </label>
+          <label class="switch" id="sound-switch">
+            <input type="checkbox" id="sound-toggle" checked>
+            <span class="track"></span>
+            <span class="label-txt">Dźwięk</span>
+          </label>
+          <div class="menu-divider"></div>
+          <div class="menu-section">Postęp</div>
+          <button class="menu-item" role="menuitem" onclick="closeMenu(); exportProgress()"><span class="mi-ic">⭳</span><span>Eksport postępu</span></button>
+          <button class="menu-item" role="menuitem" onclick="closeMenu(); document.getElementById('import-file').click()"><span class="mi-ic">⭱</span><span>Import postępu</span></button>
+          <button class="menu-item danger" role="menuitem" onclick="closeMenu(); resetSession()"><span class="mi-ic">↺</span><span>Reset sesji</span></button>
+        </div>
+      </div>
+    </div>
     <input type="file" id="import-file" accept="application/json,.json" class="hidden">
   </div>
 
@@ -1884,12 +1928,12 @@ function updateStats(){
 function updateUIForMode(){
   const mstat=$('mastery-stat');
   if(currentMode === 'test') {
-      $('btn-mode').textContent = "Wróć do bazy nauki";
+      $('btn-mode').textContent = "← Tryb nauki";
       $('brand-em').textContent = "— Test (40 pytań)";
       $('shuffle-switch').classList.add('hidden'); // Ukrycie widoczności dla testu
       if(mstat) mstat.classList.add('hidden');     // opanowanie kształtuje tylko tryb nauki
   } else {
-      $('btn-mode').textContent = "Przejdź do Testu (40 pytań)";
+      $('btn-mode').textContent = "🎓 Tryb testu";
       $('brand-em').textContent = "— Baza pytań";
       $('shuffle-switch').classList.remove('hidden'); // Przywrócenie dla bazy
       if(mstat) mstat.classList.remove('hidden');
@@ -2544,7 +2588,8 @@ function updateFavBtn(){
 }
 function updateFavCount(){
   const n=favorites.size;
-  const ob=$('fav-open-btn'); if(ob) ob.textContent='★ Ulubione ('+n+')';
+  const badge=$('fav-count');
+  if(badge){ badge.textContent=n; badge.classList.toggle('hidden', n===0); }
   const tab=$('tab-fav'); if(tab) tab.textContent='★ Ulubione ('+n+')';
 }
 
@@ -2606,6 +2651,23 @@ function openBrowse(tab){
   $('browse-overlay').classList.remove('hidden');
 }
 function closeBrowse(){ $('browse-overlay').classList.add('hidden'); }
+
+/* ====== Menu „⚙" (ustawienia + postęp) ====== */
+function toggleMenu(){
+  const pop=$('menu-pop');
+  const willOpen = pop.classList.contains('hidden');
+  pop.classList.toggle('hidden', !willOpen);
+  $('menu-btn').setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+}
+function closeMenu(){
+  $('menu-pop').classList.add('hidden');
+  $('menu-btn').setAttribute('aria-expanded','false');
+}
+document.addEventListener('click', e=>{
+  if($('menu-pop').classList.contains('hidden')) return;
+  if(e.target.closest('#menu-pop') || e.target.closest('#menu-btn')) return;  // klik w menu/przycisk → zostaw
+  closeMenu();
+});
 function setBrowseTab(t){ browseTab=t; updateBrowseTabs(); renderBrowseList(); }
 function updateBrowseTabs(){
   $('tab-all').classList.toggle('active', browseTab==='all');
@@ -2697,11 +2759,13 @@ function openWhatsNew(){ $('whatsnew-overlay').classList.remove('hidden'); }
 function closeWhatsNew(){ $('whatsnew-overlay').classList.add('hidden'); }
 function anyModalOpen(){
   return !$('whatsnew-overlay').classList.contains('hidden')
-      || !$('browse-overlay').classList.contains('hidden');
+      || !$('browse-overlay').classList.contains('hidden')
+      || !$('menu-pop').classList.contains('hidden');
 }
 document.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
-  if(!$('browse-overlay').classList.contains('hidden')) closeBrowse();
+  if(!$('menu-pop').classList.contains('hidden')) closeMenu();
+  else if(!$('browse-overlay').classList.contains('hidden')) closeBrowse();
   else if(!$('whatsnew-overlay').classList.contains('hidden')) closeWhatsNew();
 });
 
